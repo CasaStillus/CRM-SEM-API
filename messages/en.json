@@ -200,6 +200,7 @@
       "noCustomerMessages": "No customer messages"
     },
     "composer": {
+      "emoji": "Emoji",
       "draftHint": "Tap the ✨ to draft a reply with AI — you can edit it before sending",
       "sessionExpiredHint": "24-hour session expired. Use a template to re-engage.",
       "templates": "Templates",
@@ -273,12 +274,26 @@
       "imageAlt": "Shared image",
       "you": "You"
     },
+    "emoji": {
+      "categories": "Categories",
+      "recent": "Recent",
+      "smileys": "Smileys",
+      "gestures": "Gestures and people",
+      "hearts": "Hearts and celebration",
+      "animals": "Animals and nature",
+      "food": "Food and drink",
+      "activities": "Activities",
+      "travel": "Travel and places",
+      "objects": "Objects",
+      "symbols": "Symbols"
+    },
     "actions": {
       "reply": "Reply",
       "copyText": "Copy text",
       "delete": "Delete",
       "react": "React",
       "reactWith": "React with {emoji}",
+      "moreEmojis": "More emoji",
       "nothingToCopy": "Nothing to copy",
       "copied": "Copied",
       "copyFailed": "Copy failed"

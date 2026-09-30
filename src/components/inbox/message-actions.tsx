@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { CornerUpLeft, Copy, SmilePlus } from "lucide-react";
+import { CornerUpLeft, Copy, Plus, SmilePlus } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/popover";
 import type { Message } from "@/types";
 import { useTranslations } from "next-intl";
+import { EmojiGrid } from "./emoji-picker";
 
 // WhatsApp's own quick-reaction bar starts with these six. Picking the same
 // set keeps the affordance familiar without pulling in a 300KB emoji library.
@@ -41,6 +42,8 @@ export function MessageActions({
   // interacts elsewhere.
   const [touchOpen, setTouchOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  // The quick bar first; "+" swaps it for the full grid.
+  const [showAllEmojis, setShowAllEmojis] = useState(false);
 
   const isAgent =
     message.sender_type === "agent" || message.sender_type === "bot";
@@ -68,6 +71,7 @@ export function MessageActions({
   const handlePickEmoji = (emoji: string) => {
     onReact(emoji);
     setPickerOpen(false);
+    setShowAllEmojis(false);
     setTouchOpen(false);
   };
 
@@ -104,7 +108,13 @@ export function MessageActions({
           isAgent ? "right-3" : "left-3",
         )}
       >
-        <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+        <Popover
+          open={pickerOpen}
+          onOpenChange={(open) => {
+            setPickerOpen(open);
+            if (!open) setShowAllEmojis(false);
+          }}
+        >
           <PopoverTrigger
             className="flex h-5 w-5 items-center justify-center rounded-full text-popover-foreground hover:bg-muted hover:text-foreground"
             aria-label={t("react")}
@@ -112,9 +122,16 @@ export function MessageActions({
             <SmilePlus className="h-3.5 w-3.5" />
           </PopoverTrigger>
           <PopoverContent
-            className="flex w-auto flex-row gap-1 p-1.5"
+            className={cn(
+              "w-auto p-1.5",
+              showAllEmojis ? "p-2" : "flex flex-row gap-1",
+            )}
             sideOffset={6}
           >
+            {showAllEmojis ? (
+              <EmojiGrid onPick={handlePickEmoji} />
+            ) : (
+            <>
             {QUICK_EMOJIS.map((e) => (
               <button
                 key={e}
@@ -126,6 +143,17 @@ export function MessageActions({
                 {e}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() => setShowAllEmojis(true)}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              aria-label={t("moreEmojis")}
+              title={t("moreEmojis")}
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+            </>
+            )}
           </PopoverContent>
         </Popover>
         <button

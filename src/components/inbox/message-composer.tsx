@@ -22,6 +22,7 @@ import {
   Plus,
   MessageSquareDashed,
   Zap,
+  Smile,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GatedButton } from "@/components/ui/gated-button";
@@ -55,6 +56,13 @@ import {
 import { validateInteractivePayload } from "@/lib/whatsapp/interactive";
 import type { InteractiveMessagePayload, QuickReply } from "@/types";
 import { QuickReplyPicker } from "./quick-reply-picker";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { EmojiGrid } from "./emoji-picker";
+import { insertAtCaret } from "./emoji-data";
 import { useWhatsAppCapabilities } from '@/hooks/use-whatsapp-capabilities';
 import { ProviderDisabledControl } from '@/components/whatsapp/provider-disabled-control';
 import { providerDisabledReason } from '@/lib/whatsapp/providers/ui-policy';
@@ -229,6 +237,28 @@ export function MessageComposer({
     // Max 4 lines (~96px)
     el.style.height = `${Math.min(el.scrollHeight, 96)}px`;
   }, []);
+
+  // Emoji go in where the caret was, not at the end, and the picker
+  // stays open so several can be added in a row — as on the phone.
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const handlePickEmoji = useCallback(
+    (emoji: string) => {
+      const el = textareaRef.current;
+      const { text: next, caret } = insertAtCaret(
+        el?.value ?? "",
+        emoji,
+        el?.selectionStart ?? null,
+        el?.selectionEnd ?? null,
+      );
+      setText(next);
+      requestAnimationFrame(() => {
+        adjustHeight();
+        const input = textareaRef.current;
+        if (input) input.setSelectionRange(caret, caret);
+      });
+    },
+    [adjustHeight],
+  );
 
   const handleSend = useCallback(async () => {
     const trimmed = text.trim();
@@ -746,6 +776,20 @@ export function MessageComposer({
               <Sparkles className="h-4 w-4" />
             )}
           </GatedButton>
+
+          <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
+            <PopoverTrigger
+              disabled={effectiveSessionExpired || readOnly}
+              title={readOnly ? t("readOnlyTitle") : t("emoji")}
+              aria-label={t("emoji")}
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md p-0 text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Smile className="h-4 w-4" />
+            </PopoverTrigger>
+            <PopoverContent side="top" align="start" className="w-auto p-2">
+              <EmojiGrid onPick={handlePickEmoji} />
+            </PopoverContent>
+          </Popover>
 
           <textarea
             ref={textareaRef}

@@ -193,6 +193,18 @@ export interface UazapiInstanceClient {
   sendText(input: UazapiTextInput): Promise<UazapiSendResult>;
   sendMedia(input: UazapiMediaInput): Promise<UazapiSendResult>;
   downloadMessage(id: string): Promise<UazapiDownloadedMedia>;
+  /**
+   * Reacts to a message with one emoji; an empty emoji removes the
+   * reaction, as it does in WhatsApp itself.
+   *
+   * Optional in the type only so hand-written test fakes of this client
+   * keep compiling; the real client always implements it.
+   */
+  reactToMessage?(input: {
+    number: string;
+    messageId: string;
+    emoji: string;
+  }): Promise<void>;
   findChats(input: { limit: number; offset: number }): Promise<UazapiChatPage>;
   findMessages(input: {
     chatId: string;
@@ -608,6 +620,11 @@ const DELETE_INSTANCE: UazapiOperation = {
 };
 const SEND_TEXT: UazapiOperation = { name: 'send.text', idempotent: false };
 const SEND_MEDIA: UazapiOperation = { name: 'send.media', idempotent: false };
+/**
+ * Idempotent: sending the same reaction twice leaves WhatsApp in the same
+ * state, so a retry cannot double anything the customer sees.
+ */
+const REACT: UazapiOperation = { name: 'message.react', idempotent: true };
 const DOWNLOAD_MESSAGE: UazapiOperation = {
   name: 'message.download',
   idempotent: true,
@@ -890,6 +907,20 @@ export function createUazapiInstanceClient(
           track_id: input.trackId,
         })
       );
+    },
+
+    async reactToMessage(input) {
+      const messageId = asNonEmptyString(input.messageId);
+      if (messageId === null) {
+        throw invalidRequest(REACT.name, 'missing_message_id');
+      }
+      await transport.request({
+        operation: REACT,
+        method: 'POST',
+        path: '/message/react',
+        // `text` is the emoji; '' removes the reaction.
+        body: { number: input.number, id: messageId, text: input.emoji },
+      });
     },
 
     async downloadMessage(id) {

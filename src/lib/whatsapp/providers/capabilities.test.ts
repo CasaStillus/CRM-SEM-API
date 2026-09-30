@@ -12,7 +12,7 @@ describe('WhatsApp provider capabilities', () => {
     expect(supportsCapability('meta', 'broadcasts')).toBe(true);
   });
 
-  it('allows only the UAZAPI v1 core', () => {
+  it('allows the UAZAPI core plus reactions', () => {
     expect(supportsCapability('uazapi', 'connection_status')).toBe(true);
     expect(supportsCapability('uazapi', 'send_text')).toBe(true);
     expect(supportsCapability('uazapi', 'send_media')).toBe(true);
@@ -22,7 +22,7 @@ describe('WhatsApp provider capabilities', () => {
     expect(supportsCapability('uazapi', 'template_sync')).toBe(false);
     expect(supportsCapability('uazapi', 'broadcasts')).toBe(false);
     expect(supportsCapability('uazapi', 'interactive')).toBe(false);
-    expect(supportsCapability('uazapi', 'reactions')).toBe(false);
+    expect(supportsCapability('uazapi', 'reactions')).toBe(true);
     expect(supportsCapability('uazapi', 'location')).toBe(false);
   });
 

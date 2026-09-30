@@ -572,6 +572,59 @@ async function flagBroadcastReplyIfAny(
   }
 }
 
+/**
+ * Mirror of the Meta route's reaction handling for providers that deliver
+ * reactions through the normalized envelope. Best-effort: a reaction to a
+ * message the CRM never stored is logged and dropped.
+ */
+async function applyInboundReaction(input: {
+  db: InboundDatabase;
+  provider: WhatsAppProvider;
+  reaction: { emoji: string; targetExternalId: string };
+  conversationId: string;
+  actorType: 'customer' | 'agent';
+  actorId: string;
+}): Promise<void> {
+  const { db, reaction } = input;
+
+  const targetId = await lookupInternalIdByExternalId(
+    db,
+    input.provider,
+    reaction.targetExternalId,
+    input.conversationId
+  );
+  if (!targetId) {
+    console.warn(
+      '[inbound] reaction target message not found; skipping',
+      reaction.targetExternalId
+    );
+    return;
+  }
+
+  if (!reaction.emoji) {
+    const { error } = await db
+      .from('message_reactions')
+      .delete()
+      .eq('message_id', targetId)
+      .eq('actor_type', input.actorType)
+      .eq('actor_id', input.actorId);
+    if (error) console.error('[inbound] reaction delete failed:', error.message);
+    return;
+  }
+
+  const { error } = await db.from('message_reactions').upsert(
+    {
+      message_id: targetId,
+      conversation_id: input.conversationId,
+      actor_type: input.actorType,
+      actor_id: input.actorId,
+      emoji: reaction.emoji,
+    },
+    { onConflict: 'message_id,actor_type,actor_id' }
+  );
+  if (error) console.error('[inbound] reaction upsert failed:', error.message);
+}
+
 export interface ProcessInboundMessageInput {
   db: InboundDatabase;
   event: NormalizedInboundMessage;
@@ -619,6 +672,22 @@ export async function processInboundMessage(
   if (!participants) return;
 
   const { contact, conversation } = participants;
+
+  // An emoji reaction is not a message: it updates who reacted what on
+  // an earlier one, and wakes nothing downstream.
+  if (event.reaction) {
+    await applyInboundReaction({
+      db,
+      provider: event.provider,
+      reaction: event.reaction,
+      conversationId: conversation.id,
+      // Reacted from the linked phone: that is the business, filed under
+      // the WhatsApp config's owner like every other phone-typed reply.
+      actorType: event.fromMe ? 'agent' : 'customer',
+      actorId: event.fromMe ? configOwnerUserId : contact.id,
+    });
+    return;
+  }
 
   const content = event.content;
   // Empty text is stored as NULL, not '', so the inbox renders nothing

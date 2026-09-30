@@ -156,6 +156,21 @@ export interface NormalizedInboundMessage {
    * everything that did not come from a click-to-WhatsApp ad.
    */
   adReferral?: NormalizedAdReferral | null;
+  /**
+   * Set when the delivery is an emoji reaction to an earlier message
+   * rather than a message of its own. A reaction is per-(message, person)
+   * state: it is written to `message_reactions`, never to `messages`, and
+   * nothing downstream (unread, flows, automations, AI) sees it. Only
+   * UAZAPI sets this; the Meta route handles its reactions itself.
+   */
+  reaction?: NormalizedReaction | null;
+}
+
+export interface NormalizedReaction {
+  /** The emoji, or '' when the person removed their reaction. */
+  emoji: string;
+  /** Provider id of the message that was reacted to. */
+  targetExternalId: string;
 }
 
 export interface NormalizedStatusUpdate {

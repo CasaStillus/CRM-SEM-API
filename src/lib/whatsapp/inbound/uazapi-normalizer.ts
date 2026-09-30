@@ -22,6 +22,7 @@ import type {
   NormalizedContent,
   NormalizedInboundEvent,
   NormalizedInboundMessage,
+  NormalizedReaction,
   NormalizedSender,
   NormalizedStatusUpdate,
 } from './types';
@@ -81,6 +82,54 @@ const MESSAGE_TYPES: Record<string, NormalizedContent['type']> = {
   location: 'location',
   locationmessage: 'location',
 };
+
+/** WhatsApp's reaction message, in both spellings. */
+const REACTION_TYPES = new Set(['reactionmessage', 'reaction']);
+
+/** A WhatsApp message id: letters, digits and a few separators, no emoji. */
+function asMessageId(value: unknown): string | null {
+  const text = asText(value);
+  if (!text || !/^[A-Za-z0-9:_\-@.]{6,}$/.test(text)) return null;
+  // `owner:ID` is UAZAPI's row id; the CRM stores the bare WhatsApp id.
+  return text.includes(':') ? text.slice(text.lastIndexOf(':') + 1) : text;
+}
+
+/**
+ * The emoji and the reacted-to message of a ReactionMessage.
+ *
+ * WhatsApp's own shape is `{ text: '👍', key: { ID: '<target>' } }`, and
+ * UAZAPI also exposes the target as `reaction`. Both are read; an empty
+ * emoji is a removal, not a missing field.
+ */
+function readReaction(
+  data: Record<string, unknown>
+): NormalizedReaction | null {
+  const content = asRecord(data.content);
+  const key = content
+    ? (asRecord(content.key) ?? asRecord(content.Key))
+    : null;
+
+  const targetExternalId =
+    asMessageId(data.reaction) ??
+    asMessageId(key?.ID) ??
+    asMessageId(key?.id) ??
+    asMessageId(key?.Id);
+  if (targetExternalId === null) return null;
+
+  const emojiSource =
+    typeof content?.text === 'string'
+      ? content.text
+      : typeof data.text === 'string'
+        ? data.text
+        : // `reaction` holding the emoji rather than the id
+          typeof data.reaction === 'string' && asMessageId(data.reaction) === null
+          ? data.reaction
+          : typeof data.content === 'string'
+            ? data.content
+            : '';
+
+  return { emoji: emojiSource.trim(), targetExternalId };
+}
 
 const STATUS_VALUES: Record<string, NormalizedStatusUpdate['status']> = {
   sent: 'sent',
@@ -335,6 +384,30 @@ function normalizeMessage(
   }
 
   const rawType = asText(data.messageType) ?? asText(data.type);
+
+  if (rawType && REACTION_TYPES.has(rawType.toLowerCase())) {
+    const reaction = readReaction(data);
+    if (reaction === null) {
+      return quarantine('missing_message_id', eventName);
+    }
+    const reactionEvent: NormalizedInboundMessage = {
+      kind: 'message',
+      provider: 'uazapi',
+      externalMessageId: messageId,
+      occurredAt: timestampToIso(data.messageTimestamp),
+      fromMe,
+      isGroup,
+      sender,
+      chat: normalizeChat(data, chatId, isGroup),
+      // Never stored: the processor writes `reaction` to
+      // message_reactions and returns before any message insert.
+      content: { type: 'text', text: '' },
+      replyToExternalId: null,
+      reaction,
+    };
+    return { outcome: 'event', events: [reactionEvent] };
+  }
+
   const type = rawType ? MESSAGE_TYPES[rawType.toLowerCase()] : undefined;
   if (!type) {
     return quarantine('unknown_message_type', eventName);

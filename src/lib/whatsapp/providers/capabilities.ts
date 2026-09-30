@@ -28,7 +28,8 @@ export const PROVIDER_CAPABILITIES: ProviderCapabilityMatrix = Object.freeze({
     template_sync: false,
     broadcasts: false,
     interactive: false,
-    reactions: false,
+    // `/message/react`, and inbound ReactionMessage deliveries.
+    reactions: true,
     location: false,
   }),
 });

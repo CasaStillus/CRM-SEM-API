@@ -200,6 +200,7 @@
       "noCustomerMessages": "고객 메시지 없음"
     },
     "composer": {
+      "emoji": "이모지",
       "draftHint": "✨를 눌러 AI로 답장 초안을 작성하세요 — 보내기 전에 수정할 수 있습니다",
       "sessionExpiredHint": "24시간 세션이 만료되었습니다. 다시 연결하려면 템플릿을 사용하세요.",
       "templates": "템플릿",
@@ -273,12 +274,26 @@
       "imageAlt": "공유된 이미지",
       "you": "나"
     },
+    "emoji": {
+      "categories": "카테고리",
+      "recent": "최근 사용",
+      "smileys": "스마일리",
+      "gestures": "제스처 및 사람",
+      "hearts": "하트 및 축하",
+      "animals": "동물 및 자연",
+      "food": "음식 및 음료",
+      "activities": "활동",
+      "travel": "여행 및 장소",
+      "objects": "사물",
+      "symbols": "기호"
+    },
     "actions": {
       "reply": "답장",
       "copyText": "텍스트 복사",
       "delete": "삭제",
       "react": "반응 남기기",
       "reactWith": "{emoji}(으)로 반응하기",
+      "moreEmojis": "이모지 더 보기",
       "nothingToCopy": "복사할 내용이 없습니다",
       "copied": "복사됨",
       "copyFailed": "복사 실패"

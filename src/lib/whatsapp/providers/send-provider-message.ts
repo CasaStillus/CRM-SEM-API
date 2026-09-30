@@ -135,6 +135,23 @@ export async function loadProviderTransport(
     };
   }
 
+  return {
+    provider,
+    config,
+    accessToken: null,
+    transport: createUazapiProvider(await loadUazapiInstanceClient(config, deps)),
+  };
+}
+
+/**
+ * The instance client for a UAZAPI account, for the operations that are
+ * not plain text/media sends (reactions). Same checks, same errors, as
+ * the send path.
+ */
+export async function loadUazapiInstanceClient(
+  config: WhatsAppConfigRow,
+  deps: ProviderTransportDeps = {}
+): Promise<UazapiInstanceClient> {
   // UAZAPI has no credential that works while the session is down: an
   // unpaired instance simply has no WhatsApp to send through.
   if (config.status !== 'connected') {
@@ -169,15 +186,7 @@ export async function loadProviderTransport(
   }
 
   const createClient = deps.createUazapiClient ?? createUazapiInstanceClient;
-
-  return {
-    provider,
-    config,
-    accessToken: null,
-    transport: createUazapiProvider(
-      createClient({ baseUrl: installation.baseUrl, instanceToken })
-    ),
-  };
+  return createClient({ baseUrl: installation.baseUrl, instanceToken });
 }
 
 /**

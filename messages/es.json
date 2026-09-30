@@ -200,6 +200,7 @@
       "noCustomerMessages": "Sin mensajes del cliente"
     },
     "composer": {
+      "emoji": "Emoji",
       "draftHint": "Toca ✨ para redactar una respuesta con IA; puedes editarla antes de enviarla",
       "sessionExpiredHint": "La sesión de 24 horas expiró. Usa una plantilla para retomar el contacto.",
       "templates": "Plantillas",
@@ -273,12 +274,26 @@
       "imageAlt": "Imagen compartida",
       "you": "Tú"
     },
+    "emoji": {
+      "categories": "Categorías",
+      "recent": "Recientes",
+      "smileys": "Caritas",
+      "gestures": "Gestos y personas",
+      "hearts": "Corazones y celebración",
+      "animals": "Animales y naturaleza",
+      "food": "Comidas y bebidas",
+      "activities": "Actividades",
+      "travel": "Viajes y lugares",
+      "objects": "Objetos",
+      "symbols": "Símbolos"
+    },
     "actions": {
       "reply": "Responder",
       "copyText": "Copiar texto",
       "delete": "Eliminar",
       "react": "Reaccionar",
       "reactWith": "Reaccionar con {emoji}",
+      "moreEmojis": "Más emojis",
       "nothingToCopy": "Nada que copiar",
       "copied": "Copiado",
       "copyFailed": "Error al copiar"

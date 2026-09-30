@@ -358,6 +358,38 @@ describe('UAZAPI message sending', () => {
     ).rejects.toMatchObject({ kind: 'invalid_response' });
   });
 
+  it('reacts to a message through /message/react', async () => {
+    const fetchImpl = fetchReturning({ success: true });
+
+    await instanceClient(fetchImpl).reactToMessage!({
+      number: '5511999999999',
+      messageId: '3EB0538DA65A59F6D8A251',
+      emoji: '👍',
+    });
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://tenant.uazapi.com/message/react',
+      expect.objectContaining({ method: 'POST' })
+    );
+    expect(lastBody(fetchImpl)).toEqual({
+      number: '5511999999999',
+      id: '3EB0538DA65A59F6D8A251',
+      text: '👍',
+    });
+  });
+
+  it('removes a reaction by sending an empty emoji', async () => {
+    const fetchImpl = fetchReturning({ success: true });
+
+    await instanceClient(fetchImpl).reactToMessage!({
+      number: '5511999999999',
+      messageId: '3EB0538DA65A59F6D8A251',
+      emoji: '',
+    });
+
+    expect(lastBody(fetchImpl)).toMatchObject({ text: '' });
+  });
+
   it('downloads inbound media as a link and never as base64', async () => {
     const fetchImpl = fetchReturning({
       fileURL: 'https://api.uazapi.com/files/a.jpg',
