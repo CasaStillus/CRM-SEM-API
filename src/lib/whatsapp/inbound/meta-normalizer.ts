@@ -10,6 +10,7 @@
  * exported so the route can branch before calling this.
  */
 
+import { extractMetaAdReferral, type MetaReferralPayload } from './ad-referral';
 import {
   hasUsableIdentity,
   identityDisplayName,
@@ -57,6 +58,8 @@ export interface MetaInboundMessage {
   };
   button?: { text?: string; payload?: string };
   context?: { id: string };
+  /** Present when the customer arrived from a click-to-WhatsApp ad. */
+  referral?: MetaReferralPayload;
 }
 
 export interface MetaStatusError {
@@ -234,6 +237,10 @@ export function normalizeMetaMessage(
   const sender = normalizeSender(message, contact);
   if (!sender) return null;
 
+  const adReferral = message.referral
+    ? extractMetaAdReferral(message.referral)
+    : null;
+
   return {
     kind: 'message',
     provider: 'meta',
@@ -255,6 +262,7 @@ export function normalizeMetaMessage(
     },
     content: normalizeContent(message),
     replyToExternalId: message.context?.id ?? null,
+    ...(adReferral ? { adReferral } : {}),
   };
 }
 

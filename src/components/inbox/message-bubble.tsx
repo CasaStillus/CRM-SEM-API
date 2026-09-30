@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ReplyQuote } from "./reply-quote";
+import { AdReferralCard } from "./ad-referral-card";
 import { MessageReactions } from "./message-reactions";
 import {
   MediaAudioBubble,
@@ -278,6 +279,11 @@ export function MessageBubble({
           <p className="text-primary mb-0.5 text-xs font-semibold">
             {message.author_name}
           </p>
+        )}
+        {/* The ad the lead tapped before writing, drawn above their
+            message the way the phone shows it. */}
+        {!isAgent && message.ad_referral && (
+          <AdReferralCard referral={message.ad_referral} t={t} />
         )}
         {reply && (
           <ReplyQuote

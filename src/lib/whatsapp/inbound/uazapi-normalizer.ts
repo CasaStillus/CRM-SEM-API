@@ -15,6 +15,7 @@
  *   - `quarantine` — not recognized; store a redacted sample and ack.
  */
 
+import { extractUazapiAdReferral } from './ad-referral';
 import type {
   NormalizedChat,
   NormalizedConnectionUpdate,
@@ -351,6 +352,11 @@ function normalizeMessage(
     content: normalizeContent(data, messageId, type),
     replyToExternalId: asText(data.quoted),
   };
+
+  // A lead from a click-to-WhatsApp ad carries the ad card in the
+  // message context. Only a customer's message can start from an ad.
+  const adReferral = fromMe ? null : extractUazapiAdReferral(data);
+  if (adReferral) event.adReferral = adReferral;
 
   return { outcome: 'event', events: [event] };
 }

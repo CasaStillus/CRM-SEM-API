@@ -254,7 +254,11 @@
       "downloadFailed": "Não foi possível baixar o anexo",
       "viewImage": "Ver imagem",
       "expandVideo": "Expandir vídeo",
-      "imageAlt": "Imagem compartilhada"
+      "imageAlt": "Imagem compartilhada",
+      "adReferralAd": "Anúncio",
+      "adReferralPost": "Publicação patrocinada",
+      "adReferralFromAd": "Veio de um anúncio",
+      "adReferralOpen": "Ver anúncio"
     },
     "mediaViewer": {
       "counter": "{index} de {total}",

@@ -254,7 +254,11 @@
       "downloadFailed": "Couldn't download the attachment",
       "viewImage": "View image",
       "expandVideo": "Expand video",
-      "imageAlt": "Shared image"
+      "imageAlt": "Shared image",
+      "adReferralAd": "Ad",
+      "adReferralPost": "Sponsored post",
+      "adReferralFromAd": "Came from an ad",
+      "adReferralOpen": "View ad"
     },
     "mediaViewer": {
       "counter": "{index} of {total}",

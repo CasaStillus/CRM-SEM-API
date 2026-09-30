@@ -18,6 +18,13 @@ import { findExistingContact, isUniqueViolation } from '../../contacts/dedupe';
 import { reopenClosedConversation } from '../../conversations/reopen';
 import { dispatchInboundToFlows } from '../../flows/engine';
 import { dispatchWebhookEvent } from '../../webhooks/deliver';
+import type { MirrorStorage } from '../mirror-inbound-media';
+import {
+  buildAdReferralRow,
+  isMissingAdReferralColumn,
+  mirrorAdThumbnail,
+  type AdReferralRow,
+} from './ad-referral';
 import {
   attachExternalIdentity,
   findContactIdByExternalIdentity,
@@ -295,7 +302,9 @@ async function findOrCreateContact(
       ? null
       : await resolveAvatarUrl(resolveAvatar, sender);
     const combinedPatch =
-      patch || avatarUrl ? { ...patch, ...(avatarUrl ? { avatar_url: avatarUrl } : {}) } : null;
+      patch || avatarUrl
+        ? { ...patch, ...(avatarUrl ? { avatar_url: avatarUrl } : {}) }
+        : null;
     if (combinedPatch) {
       const { data: updated, error: updateError } = await db
         .from('contacts')
@@ -586,8 +595,14 @@ export interface ProcessInboundMessageInput {
 export async function processInboundMessage(
   input: ProcessInboundMessageInput
 ): Promise<void> {
-  const { db, event, accountId, configOwnerUserId, resolveMedia, resolveAvatar } =
-    input;
+  const {
+    db,
+    event,
+    accountId,
+    configOwnerUserId,
+    resolveMedia,
+    resolveAvatar,
+  } = input;
 
   const subject = threadSubject(event);
   const participants =
@@ -641,6 +656,41 @@ export async function processInboundMessage(
     }
   }
 
+  // The ad a lead clicked, when there was one. The preview image is
+  // copied to our own storage first: the provider's link expires within
+  // days, and the card should keep its photo as long as the lead exists.
+  let adReferralRow: AdReferralRow | null = null;
+  if (event.adReferral) {
+    const storage =
+      (db as unknown as { storage?: MirrorStorage }).storage ?? null;
+    const mirrored = await mirrorAdThumbnail({
+      storage,
+      accountId,
+      externalMessageId: event.externalMessageId,
+      referral: event.adReferral,
+      occurredAt: event.occurredAt,
+    }).catch((error: unknown) => {
+      console.warn(
+        '[inbound] ad thumbnail mirror failed:',
+        error instanceof Error ? error.message : error
+      );
+      return null;
+    });
+    adReferralRow = buildAdReferralRow(event.adReferral, mirrored);
+    // One line per ad lead, so the shape that actually arrived can be
+    // checked in the deploy logs without querying the database.
+    console.info(
+      '[inbound] ad referral:',
+      JSON.stringify({
+        message_id: event.externalMessageId,
+        source: adReferralRow.source,
+        title: adReferralRow.title,
+        has_thumbnail: Boolean(adReferralRow.thumbnail_url),
+        mirrored: Boolean(mirrored),
+      })
+    );
+  }
+
   // Determine whether this is the contact's very first inbound message
   // BEFORE the insert, so the count is accurate. Covers the case where the
   // contact row already exists (manual add / CSV import) but they have
@@ -659,36 +709,50 @@ export async function processInboundMessage(
   // `.select()` returns a row ONLY on a genuine first insert. This is the
   // single idempotency boundary, and it must sit BEFORE the unread bump
   // and all downstream fan-out (issue #367).
-  const { data: insertedRows, error: msgError } = await db
-    .from('messages')
-    .upsert(
-      {
-        conversation_id: conversation.id,
-        provider: event.provider,
-        // A message typed on the linked phone is the business speaking,
-        // not the customer, and the inbox must not read it as a reply
-        // waiting to be answered.
-        sender_type: event.fromMe ? 'agent' : 'customer',
-        // Only meaningful in a group, where the thread has many voices.
-        author_name: event.isGroup ? event.sender.displayName : null,
-        imported: input.imported ?? false,
-        content_type: content.type,
-        content_text: contentText,
-        media_url: mediaUrl,
-        media_type: mediaType,
-        message_id: event.externalMessageId,
-        status: 'delivered',
-        created_at: event.occurredAt,
-        reply_to_message_id: replyToInternalId,
-        // Only populated for content_type='interactive'.
-        interactive_reply_id: interactiveReplyId,
-      },
-      {
+  const messageRow: Record<string, unknown> = {
+    conversation_id: conversation.id,
+    provider: event.provider,
+    // A message typed on the linked phone is the business speaking,
+    // not the customer, and the inbox must not read it as a reply
+    // waiting to be answered.
+    sender_type: event.fromMe ? 'agent' : 'customer',
+    // Only meaningful in a group, where the thread has many voices.
+    author_name: event.isGroup ? event.sender.displayName : null,
+    imported: input.imported ?? false,
+    content_type: content.type,
+    content_text: contentText,
+    media_url: mediaUrl,
+    media_type: mediaType,
+    message_id: event.externalMessageId,
+    status: 'delivered',
+    created_at: event.occurredAt,
+    reply_to_message_id: replyToInternalId,
+    // Only populated for content_type='interactive'.
+    interactive_reply_id: interactiveReplyId,
+  };
+  // Only written when there is an ad, so an installation that has not
+  // run migration 051 keeps storing every other message untouched.
+  if (adReferralRow) messageRow.ad_referral = adReferralRow;
+
+  const insertMessage = (row: Record<string, unknown>) =>
+    db
+      .from('messages')
+      .upsert(row, {
         onConflict: 'conversation_id,provider,message_id',
         ignoreDuplicates: true,
-      }
-    )
-    .select('id');
+      })
+      .select('id');
+
+  let { data: insertedRows, error: msgError } = await insertMessage(messageRow);
+
+  // Migration 051 not applied yet: keep the lead, lose only the card.
+  if (msgError && adReferralRow && isMissingAdReferralColumn(msgError)) {
+    console.warn(
+      '[inbound] messages.ad_referral is missing — run migration 051. Storing the message without the ad card.'
+    );
+    delete messageRow.ad_referral;
+    ({ data: insertedRows, error: msgError } = await insertMessage(messageRow));
+  }
 
   if (msgError) {
     console.error('Error inserting message:', msgError);

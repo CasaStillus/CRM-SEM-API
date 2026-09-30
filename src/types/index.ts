@@ -305,6 +305,26 @@ export interface Message {
    * an AI reply or an outbound webhook. Migration 045.
    */
   imported?: boolean;
+  /**
+   * The click-to-WhatsApp ad the customer tapped before writing, shown
+   * as a card above the message. Null on everything else. Migration 051.
+   */
+  ad_referral?: MessageAdReferral | null;
+}
+
+/** Stored shape of `messages.ad_referral`. */
+export interface MessageAdReferral {
+  source: 'meta_referral' | 'uazapi_external_ad_reply' | 'uazapi_signal';
+  source_type: string | null;
+  source_id: string | null;
+  source_url: string | null;
+  title: string | null;
+  body: string | null;
+  media_type: string | null;
+  thumbnail_url: string | null;
+  media_url: string | null;
+  ctwa_clid: string | null;
+  raw?: Record<string, unknown>;
 }
 
 export type ReactionActor = 'customer' | 'agent';

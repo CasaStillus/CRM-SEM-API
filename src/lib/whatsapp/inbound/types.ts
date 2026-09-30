@@ -94,6 +94,50 @@ export interface NormalizedChat {
   name: string | null;
 }
 
+/**
+ * The ad a lead clicked before writing, when the message came from a
+ * click-to-WhatsApp campaign. WhatsApp renders it as the preview card
+ * above the customer's first message; the CRM keeps the same fields so
+ * the inbox can show the same card.
+ *
+ * Meta documents this as `referral` on the inbound message. UAZAPI
+ * forwards WhatsApp's own `contextInfo.externalAdReply`, whose exact
+ * spelling is not documented — `raw` keeps a sanitized copy of what
+ * actually arrived, so the mapping can be checked against a real lead.
+ */
+export interface NormalizedAdReferral {
+  /**
+   * Which shape was read. `uazapi_signal` means the payload said the
+   * conversation came from an ad but carried no card to show.
+   */
+  source: 'meta_referral' | 'uazapi_external_ad_reply' | 'uazapi_signal';
+  /** `ad` or `post`, as the provider reports it. */
+  sourceType: string | null;
+  /** The ad or post id. */
+  sourceId: string | null;
+  /** Link to the ad or post. */
+  sourceUrl: string | null;
+  /** Headline shown in bold on the card. */
+  title: string | null;
+  /** Ad text shown under the headline. */
+  body: string | null;
+  /** `image` or `video`. */
+  mediaType: string | null;
+  /** Provider-hosted preview image. Usually short-lived. */
+  thumbnailUrl: string | null;
+  /** Provider-hosted full image or video, when supplied. */
+  mediaUrl: string | null;
+  /**
+   * The JPEG preview WhatsApp embeds in the message itself, base64.
+   * Used only when the link above cannot be downloaded; never stored.
+   */
+  thumbnailBase64: string | null;
+  /** Click id Meta uses to attribute the conversation to the ad. */
+  ctwaClid: string | null;
+  /** Sanitized copy of the provider's ad object, for diagnosis. */
+  raw: Record<string, unknown>;
+}
+
 export interface NormalizedInboundMessage {
   kind: 'message';
   provider: WhatsAppProvider;
@@ -107,6 +151,11 @@ export interface NormalizedInboundMessage {
   content: NormalizedContent;
   /** The provider id of the message being replied to, when quoting. */
   replyToExternalId: string | null;
+  /**
+   * The ad the customer clicked to start this conversation. Absent on
+   * everything that did not come from a click-to-WhatsApp ad.
+   */
+  adReferral?: NormalizedAdReferral | null;
 }
 
 export interface NormalizedStatusUpdate {

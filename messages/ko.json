@@ -254,7 +254,11 @@
       "downloadFailed": "첨부파일을 다운로드할 수 없습니다",
       "viewImage": "이미지 보기",
       "expandVideo": "동영상 확대",
-      "imageAlt": "공유된 이미지"
+      "imageAlt": "공유된 이미지",
+      "adReferralAd": "광고",
+      "adReferralPost": "스폰서 게시물",
+      "adReferralFromAd": "광고를 통해 유입됨",
+      "adReferralOpen": "광고 보기"
     },
     "mediaViewer": {
       "counter": "{total}개 중 {index}번째",

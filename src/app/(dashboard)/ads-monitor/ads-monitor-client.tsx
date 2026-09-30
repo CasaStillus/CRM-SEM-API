@@ -28,6 +28,7 @@ export interface MonitorState {
   checkedAt: string | null
   availableCents: number | null
   accountStatus: number | null
+  isPrepayAccount: boolean | null
   lowBalanceActive: boolean
   paymentIssueActive: boolean
   paymentIssueCode: string | null
@@ -531,6 +532,14 @@ function MonitorRow({
 }) {
   const state = monitor.state
 
+  // Conta no cartão não tem saldo: a Meta cobra por acúmulo, não há
+  // crédito a esgotar. Ela é monitorada só pela regra de cobrança, e o
+  // limite de saldo configurado nunca vai disparar.
+  const cardOnly =
+    state !== null &&
+    state.isPrepayAccount === false &&
+    state.availableCents === null
+
   return (
     <div className="flex flex-col gap-2 rounded-lg border p-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -539,8 +548,11 @@ function MonitorRow({
             {monitor.displayName ?? `act_${monitor.externalAccountId}`}
           </p>
           <p className="text-muted-foreground text-xs">
-            act_{monitor.externalAccountId} · limite{' '}
-            {money(monitor.thresholdCents, monitor.currency)} ·{' '}
+            act_{monitor.externalAccountId}
+            {cardOnly
+              ? ''
+              : ` · limite ${money(monitor.thresholdCents, monitor.currency)}`}
+            {' · '}
             {credentialLabel ?? 'sem portfólio'}
           </p>
         </div>
@@ -553,6 +565,8 @@ function MonitorRow({
             >
               {money(state.availableCents, monitor.currency)}
             </p>
+          ) : cardOnly ? (
+            <p className="text-muted-foreground">conta no cartão</p>
           ) : (
             <p className="text-muted-foreground">sem leitura</p>
           )}
@@ -563,6 +577,13 @@ function MonitorRow({
           ) : null}
         </div>
       </div>
+
+      {cardOnly ? (
+        <p className="text-muted-foreground text-xs">
+          Conta no cartão: não existe saldo a monitorar. O aviso sai quando a
+          cobrança parar.
+        </p>
+      ) : null}
 
       {state?.paymentIssueActive ? (
         <p className="text-destructive text-sm">

@@ -79,6 +79,13 @@ export default async function AdsMonitorPage() {
             : null,
         accountStatus:
           typeof state.account_status === 'number' ? state.account_status : null,
+        // Distingue "ainda não li" de "esta conta não tem saldo para
+        // ler". Numa conta no cartão a segunda é permanente, e mostrar
+        // um limite que nunca vai disparar confunde quem configurou.
+        isPrepayAccount:
+          typeof state.is_prepay_account === 'boolean'
+            ? state.is_prepay_account
+            : null,
         lowBalanceActive: state.low_balance_active === true,
         paymentIssueActive: state.payment_issue_active === true,
         paymentIssueCode: (state.payment_issue_code as string | null) ?? null,
