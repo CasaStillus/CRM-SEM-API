@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  IMAGE_CAPTION_MAX,
   validateStepsForActivation,
   validateTriggerForActivation,
 } from "./validate";
@@ -296,5 +297,51 @@ describe("validateTriggerForActivation", () => {
 
   it("does not flag unknown trigger types (handled elsewhere)", () => {
     expect(validateTriggerForActivation("some_future_trigger", {})).toEqual([]);
+  });
+});
+
+describe('validateStepsForActivation — send_message with image', () => {
+  const IMG = 'https://proj.supabase.co/storage/v1/object/public/flow-media/a.jpg';
+
+  it('accepts an image with no text', () => {
+    expect(
+      validateStepsForActivation([
+        { step_type: 'send_message', step_config: { text: '', image_url: IMG } },
+      ])
+    ).toEqual([]);
+  });
+
+  it('accepts an image with a caption', () => {
+    expect(
+      validateStepsForActivation([
+        { step_type: 'send_message', step_config: { text: 'Oi', image_url: IMG } },
+      ])
+    ).toEqual([]);
+  });
+
+  it('refuses a caption over WhatsApp\'s limit', () => {
+    const issues = validateStepsForActivation([
+      {
+        step_type: 'send_message',
+        step_config: { text: 'x'.repeat(IMAGE_CAPTION_MAX + 1), image_url: IMG },
+      },
+    ]);
+    expect(issues).toHaveLength(1);
+    expect(issues[0].path).toContain('text');
+  });
+
+  it('refuses an image that is not an https link', () => {
+    const issues = validateStepsForActivation([
+      { step_type: 'send_message', step_config: { text: 'Oi', image_url: 'blob:abc' } },
+    ]);
+    expect(issues[0].path).toContain('image_url');
+  });
+
+  it('still requires text when there is no image', () => {
+    expect(
+      validateStepsForActivation([
+        { step_type: 'send_message', step_config: { text: ' ' } },
+      ])
+    ).toHaveLength(1);
   });
 });

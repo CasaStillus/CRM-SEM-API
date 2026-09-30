@@ -21,7 +21,12 @@ import type {
 import { supabaseAdmin } from './admin-client'
 import { addContactTagIfAbsent } from '@/lib/contacts/tag-write'
 import { MAX_TAG_CHAIN_DEPTH, getTagChainDepth } from '@/lib/contacts/tag-chain'
-import { engineSendText, engineSendTemplate, engineSendInteractive } from './meta-send'
+import {
+  engineSendImage,
+  engineSendInteractive,
+  engineSendTemplate,
+  engineSendText,
+} from './meta-send'
 import { validateInteractivePayload } from '@/lib/whatsapp/interactive'
 import { isDeliverableUrl } from '@/lib/webhooks/ssrf'
 
@@ -362,7 +367,22 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
     case 'send_message': {
       const cfg = step.step_config as SendMessageStepConfig
       if (!args.contactId) throw new Error("Selecione um contato para enviar a mensagem")
-      const text = interpolate(cfg.text, args)
+      const text = interpolate(cfg.text ?? '', args)
+      const imageUrl = typeof cfg.image_url === 'string' ? cfg.image_url.trim() : ''
+      if (imageUrl) {
+        // Image and text travel as ONE WhatsApp message: the text is the
+        // image's caption, exactly as when you attach a photo on the phone.
+        const conversationId = await resolveConversationId(args)
+        const { whatsapp_message_id } = await engineSendImage({
+          accountId: args.automation.account_id,
+          userId: args.automation.user_id,
+          conversationId,
+          contactId: args.contactId,
+          imageUrl,
+          caption: text.trim() ? text : undefined,
+        })
+        return `Imagem com texto enviada (${whatsapp_message_id})`
+      }
       if (!text.trim()) throw new Error('send_message has empty text')
       const conversationId = await resolveConversationId(args)
       const { whatsapp_message_id } = await engineSendText({

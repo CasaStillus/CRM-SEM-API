@@ -33,6 +33,8 @@ import {
   ArrowUp,
   MousePointerClick,
   List,
+  ImagePlus,
+  X,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -72,6 +74,11 @@ import {
   type StepPath,
 } from "@/lib/automations/builder-tree"
 import { cn } from "@/lib/utils"
+import {
+  MEDIA_MAX_BYTES_BY_KIND,
+  uploadAccountMedia,
+} from "@/lib/storage/upload-media"
+import { IMAGE_CAPTION_MAX } from "@/lib/automations/validate"
 import { useWhatsAppCapabilities } from '@/hooks/use-whatsapp-capabilities'
 import { ProviderDisabledControl } from '@/components/whatsapp/provider-disabled-control'
 import { providerDisabledReason } from '@/lib/whatsapp/providers/ui-policy'
@@ -1344,17 +1351,36 @@ function StepEditor({
     onChange({ ...step, step_config: { ...cfg, ...patch } })
 
   switch (step.step_type) {
-    case "send_message":
+    case "send_message": {
+      const imageUrl = (cfg.image_url as string) || ""
+      const text = (cfg.text as string) ?? ""
       return (
-        <FieldBlock label={t("config.messageText")}>
-          <Textarea
-            value={(cfg.text as string) ?? ""}
-            onChange={(e) => set({ text: e.target.value })}
-            placeholder={t("config.placeholderMessageText")}
-            className="min-h-24 bg-muted text-foreground"
-          />
-        </FieldBlock>
+        <>
+          <FieldBlock label={t("config.imageLabel")}>
+            <MessageImageField
+              imageUrl={imageUrl}
+              imageName={(cfg.image_name as string) || ""}
+              onChange={(image_url, image_name) => set({ image_url, image_name })}
+            />
+          </FieldBlock>
+          <FieldBlock
+            label={imageUrl ? t("config.captionText") : t("config.messageText")}
+          >
+            <Textarea
+              value={text}
+              onChange={(e) => set({ text: e.target.value })}
+              placeholder={t("config.placeholderMessageText")}
+              className="min-h-24 bg-muted text-foreground"
+            />
+            {imageUrl && text.length > IMAGE_CAPTION_MAX && (
+              <p className="mt-1 text-[11px] text-destructive">
+                {t("config.captionTooLong", { max: IMAGE_CAPTION_MAX })}
+              </p>
+            )}
+          </FieldBlock>
+        </>
       )
+    }
     case "send_buttons":
     case "send_list":
       // The whole step_config IS the interactive payload; the shared
@@ -1554,6 +1580,104 @@ function StepEditor({
   }
 }
 
+/**
+ * The optional image of a "send message" step. Uploaded to the same
+ * public `flow-media` bucket the Flows builder uses, so WhatsApp can
+ * fetch it at send time; the text of the step becomes its caption.
+ */
+function MessageImageField({
+  imageUrl,
+  imageName,
+  onChange,
+}: {
+  imageUrl: string
+  imageName: string
+  onChange: (imageUrl: string, imageName: string) => void
+}) {
+  const t = useTranslations("Automations.builder")
+  const [uploading, setUploading] = useState(false)
+
+  const handleFile = async (file: File) => {
+    if (file.size > MEDIA_MAX_BYTES_BY_KIND.image) {
+      toast.error(
+        t("config.imageTooLarge", { size: (file.size / 1024 / 1024).toFixed(1) }),
+      )
+      return
+    }
+    setUploading(true)
+    try {
+      const { publicUrl } = await uploadAccountMedia("flow-media", file)
+      onChange(publicUrl, file.name)
+      toast.success(t("config.imageUploaded"))
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("config.imageUploadFailed"))
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  if (imageUrl) {
+    return (
+      <div className="flex items-center gap-3 rounded-md border border-border bg-muted p-2">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={imageUrl}
+          alt={imageName || t("config.imageLabel")}
+          className="h-16 w-16 shrink-0 rounded object-cover"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs text-foreground" title={imageName}>
+            {imageName || t("config.imageLabel")}
+          </p>
+          <p className="text-[11px] text-muted-foreground">{t("config.imageHint")}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => onChange("", "")}
+          className="rounded p-1 text-muted-foreground hover:bg-card hover:text-foreground"
+          aria-label={t("config.imageRemove")}
+          title={t("config.imageRemove")}
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <label
+      className={cn(
+        "flex w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-border bg-card px-3 py-3 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+        uploading && "pointer-events-none opacity-60",
+      )}
+    >
+      {uploading ? (
+        <>
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          {t("config.imageUploading")}
+        </>
+      ) : (
+        <>
+          <ImagePlus className="h-3.5 w-3.5" />
+          {t("config.imageUpload")}
+        </>
+      )}
+      <input
+        type="file"
+        // The flow-media bucket's image types (migration 016).
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        disabled={uploading}
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          if (f) void handleFile(f)
+          e.target.value = ""
+        }}
+      />
+    </label>
+  )
+}
+
 function FieldBlock({
   label,
   children,
@@ -1571,8 +1695,11 @@ function FieldBlock({
 
 function previewFor(step: BuilderStep): string {
   switch (step.step_type) {
-    case "send_message":
-      return (step.step_config.text as string) || "sem texto"
+    case "send_message": {
+      const text = (step.step_config.text as string) || ""
+      if (step.step_config.image_url) return `📷 ${text || "imagem"}`
+      return text || "sem texto"
+    }
     case "send_buttons":
     case "send_list":
       return interactivePayloadPreviewText(asInteractive(step.step_config)) || "sem conteúdo"

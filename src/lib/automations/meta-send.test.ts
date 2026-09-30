@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const uazapi = vi.hoisted(() => ({ sendText: vi.fn() }));
+const uazapi = vi.hoisted(() => ({ sendText: vi.fn(), sendMedia: vi.fn() }));
 const meta = vi.hoisted(() => ({
+  sendMediaMessage: vi.fn(),
   sendTextMessage: vi.fn(),
   sendTemplateMessage: vi.fn(),
 }));
@@ -54,13 +55,14 @@ vi.mock('@/lib/whatsapp/encryption', () => ({
 vi.mock('@/lib/whatsapp/meta-api', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   sendTextMessage: meta.sendTextMessage,
+  sendMediaMessage: meta.sendMediaMessage,
   sendTemplateMessage: meta.sendTemplateMessage,
 }));
 vi.mock('@/lib/whatsapp/providers/uazapi-client', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   createUazapiInstanceClient: () => ({
     sendText: uazapi.sendText,
-    sendMedia: vi.fn(),
+    sendMedia: uazapi.sendMedia,
     configureWebhook: vi.fn(),
     connect: vi.fn(),
     getStatus: vi.fn(),
@@ -70,7 +72,7 @@ vi.mock('@/lib/whatsapp/providers/uazapi-client', async (importOriginal) => ({
   }),
 }));
 
-import { engineSendTemplate, engineSendText } from './meta-send';
+import { engineSendImage, engineSendTemplate, engineSendText } from './meta-send';
 
 const META_CONFIG = {
   id: 'cfg-meta',
@@ -105,6 +107,13 @@ beforeEach(() => {
 
   meta.sendTextMessage.mockResolvedValue({ messageId: 'wamid.text' });
   meta.sendTemplateMessage.mockResolvedValue({ messageId: 'wamid.tpl' });
+  meta.sendMediaMessage.mockResolvedValue({ messageId: 'wamid.img' });
+  uazapi.sendMedia.mockResolvedValue({
+    messageId: 'uaz-img-1',
+    chatId: null,
+    status: 'Sent',
+    timestamp: null,
+  });
   uazapi.sendText.mockResolvedValue({
     messageId: 'uaz-msg-1',
     chatId: null,
@@ -174,5 +183,57 @@ describe('automations engineSendTemplate', () => {
       provider: 'meta',
       content_type: 'template',
     });
+  });
+});
+
+describe('automations engineSendImage', () => {
+  const IMAGE = 'https://proj.supabase.co/storage/v1/object/public/flow-media/account-acc-1/promo.jpg';
+
+  it('sends image and text as one UAZAPI message', async () => {
+    state.config = UAZAPI_CONFIG;
+
+    const result = await engineSendImage({
+      ...BASE,
+      imageUrl: IMAGE,
+      caption: 'Promoção de hoje!',
+    });
+
+    expect(uazapi.sendMedia).toHaveBeenCalledOnce();
+    expect(uazapi.sendMedia).toHaveBeenCalledWith(
+      expect.objectContaining({
+        number: '5511999999999',
+        type: 'image',
+        file: IMAGE,
+        // The client maps this to UAZAPI's `text` field.
+        caption: 'Promoção de hoje!',
+      })
+    );
+    expect(uazapi.sendText).not.toHaveBeenCalled();
+    expect(result).toEqual({ whatsapp_message_id: 'uaz-img-1' });
+    expect(state.writes.messages[0]).toMatchObject({
+      provider: 'uazapi',
+      content_type: 'image',
+      content_text: 'Promoção de hoje!',
+      media_url: IMAGE,
+      sender_type: 'bot',
+    });
+  });
+
+  it('sends image and caption as one Meta message', async () => {
+    await engineSendImage({ ...BASE, imageUrl: IMAGE, caption: 'Oi' });
+
+    expect(meta.sendMediaMessage).toHaveBeenCalledOnce();
+    expect(meta.sendMediaMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'image', link: IMAGE, caption: 'Oi' })
+    );
+    expect(meta.sendTextMessage).not.toHaveBeenCalled();
+  });
+
+  it('allows an image with no text', async () => {
+    state.config = UAZAPI_CONFIG;
+    await engineSendImage({ ...BASE, imageUrl: IMAGE });
+
+    expect(uazapi.sendMedia.mock.calls[0][0].caption).toBeUndefined();
+    expect(state.writes.messages[0]).toMatchObject({ content_text: null });
   });
 });

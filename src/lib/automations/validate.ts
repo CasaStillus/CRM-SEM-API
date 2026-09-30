@@ -15,6 +15,9 @@ import { validateInteractivePayload } from '@/lib/whatsapp/interactive'
 // surface at save time.
 // ------------------------------------------------------------
 
+/** WhatsApp caps an image caption at 1024 characters. */
+export const IMAGE_CAPTION_MAX = 1024
+
 export interface ValidationIssue {
   /** Dot-path for the UI to highlight; stable enough to build a table. */
   path: string
@@ -54,11 +57,23 @@ function walk(steps: StepLike[], prefix: string, issues: ValidationIssue[]): voi
 function validateOne(step: StepLike, path: string, issues: ValidationIssue[]): void {
   const c = step.step_config ?? {}
   switch (step.step_type) {
-    case 'send_message':
-      if (!nonEmpty(c.text)) {
+    case 'send_message': {
+      const hasImage = nonEmpty(c.image_url)
+      if (!nonEmpty(c.text) && !hasImage) {
         issues.push({ path: `${path}.text`, message: "O texto da mensagem é obrigatório" })
       }
+      if (hasImage && !/^https:\/\//i.test(String(c.image_url))) {
+        issues.push({ path: `${path}.image_url`, message: "A imagem precisa ser enviada novamente" })
+      }
+      // WhatsApp's caption limit. Past it the send is refused outright.
+      if (hasImage && typeof c.text === 'string' && c.text.length > IMAGE_CAPTION_MAX) {
+        issues.push({
+          path: `${path}.text`,
+          message: `Com imagem, o texto pode ter no máximo ${IMAGE_CAPTION_MAX} caracteres`,
+        })
+      }
       break
+    }
     case 'send_buttons':
     case 'send_list': {
       // The whole step_config IS the interactive payload; validate it

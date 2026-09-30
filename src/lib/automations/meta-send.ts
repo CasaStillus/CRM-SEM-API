@@ -42,6 +42,17 @@ interface SendTextArgs {
   text: string
 }
 
+interface SendImageArgs {
+  accountId: string
+  userId: string
+  conversationId: string
+  contactId: string
+  /** Public https URL of the image. */
+  imageUrl: string
+  /** Shown under the image, in the same message. */
+  caption?: string
+}
+
 interface SendTemplateArgs {
   accountId: string
   userId: string
@@ -54,6 +65,17 @@ interface SendTemplateArgs {
 
 export async function engineSendText(args: SendTextArgs): Promise<{ whatsapp_message_id: string }> {
   return sendViaProvider({ ...args, kind: 'text' })
+}
+
+/**
+ * An image with its caption, as one WhatsApp message. Both providers
+ * support it: Meta's image message with `caption`, UAZAPI's
+ * `/send/media` with `text`.
+ */
+export async function engineSendImage(
+  args: SendImageArgs,
+): Promise<{ whatsapp_message_id: string }> {
+  return sendViaProvider({ ...args, kind: 'image' })
 }
 
 export async function engineSendTemplate(
@@ -107,6 +129,7 @@ export async function engineSendInteractive(
 
 type SendInput =
   | (SendTextArgs & { kind: 'text' })
+  | (SendImageArgs & { kind: 'image' })
   | (SendTemplateArgs & { kind: 'template' })
 
 async function sendViaProvider(input: SendInput): Promise<{ whatsapp_message_id: string }> {
@@ -182,6 +205,16 @@ async function sendViaProvider(input: SendInput): Promise<{ whatsapp_message_id:
       })
       return r.messageId
     }
+    if (input.kind === 'image') {
+      const sent = await transport.send(phone, {
+        kind: 'media',
+        mediaKind: 'image',
+        url: input.imageUrl,
+        caption: input.caption,
+        trackId: localMessageId,
+      })
+      return sent.externalMessageId
+    }
     const sent = await transport.send(phone, {
       kind: 'text',
       text: input.text,
@@ -202,14 +235,17 @@ async function sendViaProvider(input: SendInput): Promise<{ whatsapp_message_id:
   // Persist the sent message so it appears in the inbox with a real
   // provider message id. sender_type='bot' distinguishes automation
   // sends from manual agent sends.
-  const content_type = input.kind === 'template' ? 'template' : 'text'
+  const content_type =
+    input.kind === 'template' ? 'template' : input.kind === 'image' ? 'image' : 'text'
   // Templates persist the substituted body, same as the manual and
   // public-API send paths. This was unconditionally null, so every
   // automation template send rendered as an empty bubble (issue #483).
   const content_text =
     input.kind === 'text'
       ? input.text
-      : templateContentText(templateRow, input.params ?? [])
+      : input.kind === 'image'
+        ? (input.caption ?? null)
+        : templateContentText(templateRow, input.params ?? [])
   const template_name = input.kind === 'template' ? input.templateName : null
 
   const { error: msgErr } = await db.from('messages').insert({
@@ -220,6 +256,7 @@ async function sendViaProvider(input: SendInput): Promise<{ whatsapp_message_id:
     content_type,
     content_text,
     template_name,
+    media_url: input.kind === 'image' ? input.imageUrl : null,
     message_id: waMessageId,
     status: 'sent',
   })
@@ -235,7 +272,9 @@ async function sendViaProvider(input: SendInput): Promise<{ whatsapp_message_id:
       last_message_text:
         input.kind === 'template'
           ? (content_text ?? `[template:${input.templateName}]`)
-          : input.text,
+          : input.kind === 'image'
+            ? (input.caption || '[image]')
+            : input.text,
       last_message_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })

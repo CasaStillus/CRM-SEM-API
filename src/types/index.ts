@@ -605,7 +605,15 @@ export type AutomationTriggerConfig =
   | Record<string, unknown>;
 
 export interface SendMessageStepConfig {
+  /** The message, or the image's caption when `image_url` is set. */
   text: string;
+  /**
+   * Optional image sent in the SAME WhatsApp message as the text, which
+   * becomes its caption. Public URL in the `flow-media` bucket.
+   */
+  image_url?: string;
+  /** Original file name, only for showing in the editor. */
+  image_name?: string;
 }
 
 /**
