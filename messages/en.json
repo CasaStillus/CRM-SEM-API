@@ -1033,6 +1033,10 @@
           "label": "Tag Added",
           "hint": "When a tag is added to a contact"
         },
+        "deal_stage_changed": {
+          "label": "Deal moved to stage",
+          "hint": "When a deal enters the chosen pipeline stage (dragging the card or from the deal form)"
+        },
         "time_based": {
           "label": "Time-Based",
           "hint": "On a recurring schedule"

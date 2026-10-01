@@ -29,6 +29,7 @@ import { toast } from "sonner";
 import { useCan } from "@/hooks/use-can";
 import { useAuth } from "@/hooks/use-auth";
 import { GatedButton } from "@/components/ui/gated-button";
+import { notifyDealStageChanged } from "@/lib/pipelines/stage-events";
 import { useTranslations } from "next-intl";
 import {
   dealHasValue,
@@ -231,6 +232,7 @@ export default function PipelinesPage() {
 
   const persistMove = useCallback(
     async (dealId: string, newStageId: string, value?: number) => {
+      const fromStageId = deals.find((d) => d.id === dealId)?.stage_id ?? null;
       // Optimistic update — board already animated; just persist.
       setDeals((prev) =>
         prev.map((d) =>
@@ -256,9 +258,13 @@ export default function PipelinesPage() {
         refreshDeals();
         return false;
       }
+      // "Negociação mudou de etapa" automations.
+      if (fromStageId !== newStageId) {
+        notifyDealStageChanged(dealId, fromStageId);
+      }
       return true;
     },
-    [supabase, refreshDeals, t],
+    [supabase, refreshDeals, t, deals],
   );
 
   const handleDealMoved = useCallback(

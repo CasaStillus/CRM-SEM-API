@@ -32,6 +32,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { notifyDealStageChanged } from "@/lib/pipelines/stage-events";
 import { useTranslations } from "next-intl";
 import {
   dealHasValue,
@@ -256,6 +257,10 @@ export function DealForm({
     }
 
     setSaving(false);
+    // "Negociação mudou de etapa" automations.
+    if (deal && deal.stage_id !== stageId) {
+      notifyDealStageChanged(deal.id, deal.stage_id);
+    }
     toast.success(deal ? t("toastUpdated") : t("toastCreated"));
     onOpenChange(false);
     onSaved();

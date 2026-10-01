@@ -7,6 +7,7 @@ import type {
   KeywordMatchTriggerConfig,
   InteractiveReplyTriggerConfig,
   TagTriggerConfig,
+  DealStageTriggerConfig,
   SendMessageStepConfig,
   SendButtonsStepConfig,
   SendListStepConfig,
@@ -47,6 +48,11 @@ export interface AutomationContext {
   agent_id?: string
   /** Button / list-row id the customer tapped, for interactive_reply. */
   interactive_reply_id?: string
+  /** deal_stage_changed: the deal and the stage it entered / left. */
+  deal_id?: string
+  stage_id?: string
+  from_stage_id?: string | null
+  pipeline_id?: string
 }
 
 export interface DispatchInput {
@@ -755,6 +761,18 @@ export function triggerMatches(automation: Automation, ctx: AutomationContext | 
     const cfg = automation.trigger_config as TagTriggerConfig
     const tagId = ctx?.tag_id
     return Boolean(tagId && cfg?.tag_id && cfg.tag_id === tagId)
+  }
+
+  // Fires only on entering the configured stage — not on staying in it.
+  if (automation.trigger_type === 'deal_stage_changed') {
+    const cfg = automation.trigger_config as DealStageTriggerConfig
+    const stageId = ctx?.stage_id
+    return Boolean(
+      stageId &&
+        cfg?.stage_id &&
+        cfg.stage_id === stageId &&
+        ctx?.from_stage_id !== stageId,
+    )
   }
 
   return true

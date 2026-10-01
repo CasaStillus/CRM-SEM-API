@@ -560,7 +560,10 @@ export type AutomationTriggerType =
   | 'time_based'
   /** Customer tapped a reply button / list row whose id matches; lets
    *  multi-step menus be chained across automations. */
-  | 'interactive_reply';
+  | 'interactive_reply'
+  /** A deal was moved into a given pipeline stage (Kanban drag or the
+   *  deal form). */
+  | 'deal_stage_changed';
 
 export type AutomationStepType =
   | 'send_message'
@@ -597,6 +600,12 @@ export interface TagTriggerConfig {
   tag_id: string;
 }
 
+/** Fires when a deal enters `stage_id` (in `pipeline_id`). */
+export interface DealStageTriggerConfig {
+  pipeline_id: string;
+  stage_id: string;
+}
+
 export interface TimeBasedTriggerConfig {
   /** Cron expression or simple HH:mm string; engine can accept either. */
   schedule: string;
@@ -612,6 +621,7 @@ export type AutomationTriggerConfig =
   | Record<string, never>
   | KeywordMatchTriggerConfig
   | TagTriggerConfig
+  | DealStageTriggerConfig
   | TimeBasedTriggerConfig
   | InteractiveReplyTriggerConfig
   | Record<string, unknown>;

@@ -1033,6 +1033,10 @@
           "label": "Etiqueta agregada",
           "hint": "Cuando se agrega una etiqueta a un contacto"
         },
+        "deal_stage_changed": {
+          "label": "Negociación cambió de etapa",
+          "hint": "Cuando una negociación entra en la etapa elegida del embudo (arrastrando la tarjeta o desde el formulario)"
+        },
         "time_based": {
           "label": "Por horario",
           "hint": "Según una programación recurrente"

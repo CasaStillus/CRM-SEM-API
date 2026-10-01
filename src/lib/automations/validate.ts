@@ -205,6 +205,13 @@ export function validateTriggerForActivation(
     if (!nonEmpty(cfg.tag_id)) {
       issues.push({ path: 'trigger.tag_id', message: "A etiqueta é obrigatória" })
     }
+  } else if (triggerType === 'deal_stage_changed') {
+    if (!nonEmpty(cfg.pipeline_id)) {
+      issues.push({ path: 'trigger.pipeline_id', message: "Escolha o funil" })
+    }
+    if (!nonEmpty(cfg.stage_id)) {
+      issues.push({ path: 'trigger.stage_id', message: "Escolha a etapa" })
+    }
   } else if (triggerType === 'interactive_reply') {
     const ids = cfg.reply_ids
     if (!Array.isArray(ids) || ids.length === 0) {

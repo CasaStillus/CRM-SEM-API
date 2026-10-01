@@ -156,6 +156,7 @@ const TRIGGER_OPTIONS: { value: AutomationTriggerType }[] = [
   { value: "new_contact_created" },
   { value: "conversation_assigned" },
   { value: "tag_added" },
+  { value: "deal_stage_changed" },
   { value: "time_based" },
 ]
 
@@ -907,6 +908,14 @@ function TriggerCard({
                   t={t}
                 />
               </div>
+            )}
+            {type === "deal_stage_changed" && (
+              <DealPipelineFields
+                pipelineId={(config.pipeline_id as string) ?? ""}
+                stageId={(config.stage_id as string) ?? ""}
+                onChange={(patch) => onConfigChange({ ...config, ...patch })}
+                t={t}
+              />
             )}
             {type === "time_based" && (
               <div>

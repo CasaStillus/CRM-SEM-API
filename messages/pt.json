@@ -1033,6 +1033,10 @@
           "label": "Etiqueta adicionada",
           "hint": "Quando uma etiqueta é adicionada a um contato"
         },
+        "deal_stage_changed": {
+          "label": "Negociação mudou de etapa",
+          "hint": "Quando uma negociação entra na etapa escolhida do funil (arrastando o card ou pelo formulário)"
+        },
         "time_based": {
           "label": "Por horário",
           "hint": "Em um agendamento recorrente"
