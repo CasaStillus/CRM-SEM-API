@@ -81,6 +81,15 @@ export function canEditSettings(role: AccountRole): boolean {
 }
 
 /**
+ * Owner / admin / viewer see every conversation of the account; an
+ * agent (seller) sees only the ones assigned to them. Mirrors
+ * `can_access_conversation()` in migration 053.
+ */
+export function seesAllConversations(role: AccountRole): boolean {
+  return role === "owner" || role === "admin" || role === "viewer";
+}
+
+/**
  * Owner / admin / agent: write operational data — send messages,
  * create contacts, move deals, run broadcasts, edit automations.
  * Viewers are read-only.

@@ -10,6 +10,8 @@ import {
 } from "@/lib/inbox/conversations";
 import type { Conversation, Message, Contact, ConversationStatus } from "@/types";
 import { useRealtime } from "@/hooks/use-realtime";
+import { useAuth } from "@/hooks/use-auth";
+import { seesAllConversations } from "@/lib/auth/roles";
 import { ConversationList } from "@/components/inbox/conversation-list";
 import { MessageThread } from "@/components/inbox/message-thread";
 import { ContactSidebar } from "@/components/inbox/contact-sidebar";
@@ -61,6 +63,8 @@ export default function InboxPage() {
 }
 
 function InboxPageInner() {
+  const { user: currentUser, accountRole } = useAuth();
+  const currentUserId = currentUser?.id ?? null;
   const t = useTranslations("Inbox.page");
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -564,6 +568,17 @@ function InboxPageInner() {
 
   const handleAssignChange = useCallback(
     (conversationId: string, assignedAgentId: string | null) => {
+      // A seller who passed the lead on no longer has access to it
+      // (migration 053), so it leaves their list right away instead of
+      // lingering until the next reload.
+      const seesAll = accountRole ? seesAllConversations(accountRole) : true;
+      if (!seesAll && assignedAgentId !== currentUserId) {
+        setConversations((prev) => prev.filter((c) => c.id !== conversationId));
+        if (activeConversation?.id === conversationId) {
+          setActiveConversation(null);
+        }
+        return;
+      }
       setConversations((prev) =>
         prev.map((c) =>
           c.id === conversationId
@@ -579,7 +594,7 @@ function InboxPageInner() {
         );
       }
     },
-    [activeConversation]
+    [activeConversation, accountRole, currentUserId]
   );
 
   // On mobile (<lg) we show a SINGLE pane — either the list or the

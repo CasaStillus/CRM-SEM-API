@@ -56,6 +56,15 @@ import { buildReplyPreview } from "./reply-quote";
 import { renderTemplateBody } from "@/lib/whatsapp/template-body";
 import { contactHandle } from "@/lib/whatsapp/wa-identity";
 import { toast } from "sonner";
+import { seesAllConversations } from "@/lib/auth/roles";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface ReplyDraft {
   id: string;
@@ -170,7 +179,14 @@ export function MessageThread({
   const tTimer = useTranslations("Inbox.sessionTimer");
   const tQuote = useTranslations("Inbox.replyQuote");
 
-  const { user } = useAuth();
+  const { user, accountRole } = useAuth();
+  // Opening a conversation clears its unread mark only for its owner.
+  // An admin reading someone else's lead does it silently: the seller
+  // still sees the blue dot (and the customer never sees a read
+  // receipt — the CRM sends none).
+  const assignedOwnerId = conversation?.assigned_agent_id ?? null;
+  const isConversationOwner =
+    assignedOwnerId === null || assignedOwnerId === user?.id;
   const { getPresence, getRow, now } = usePresence();
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -446,7 +462,7 @@ export function MessageThread({
   // Guarding on hasUnread prevents the eq-update loop: once unread_count
   // is 0 the condition is false, so no further UPDATE is issued.
   useEffect(() => {
-    if (!conversationId || !hasUnread) return;
+    if (!conversationId || !hasUnread || !isConversationOwner) return;
     const supabase = createClient();
     supabase
       .from("conversations")
@@ -455,7 +471,7 @@ export function MessageThread({
       .then(({ error }) => {
         if (error) console.error("Failed to reset unread_count:", error);
       });
-  }, [conversationId, hasUnread]);
+  }, [conversationId, hasUnread, isConversationOwner]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -846,26 +862,86 @@ export function MessageThread({
     [conversation, user?.id, t],
   );
 
-  const handleAssignChange = useCallback(
+  // A seller handing their lead to someone else loses sight of it the
+  // moment it moves, so that one case asks first.
+  const [pendingTransfer, setPendingTransfer] = useState<{
+    agentId: string | null;
+    name: string;
+  } | null>(null);
+  const [transferring, setTransferring] = useState(false);
+
+  const transferConversation = useCallback(
     async (agentId: string | null) => {
-      if (!conversation) return;
+      if (!conversation) return false;
 
       const supabase = createClient();
-      const { error } = await supabase
-        .from("conversations")
-        .update({ assigned_agent_id: agentId })
-        .eq("id", conversation.id);
+      // transfer_conversation (migration 053) moves the lead and the
+      // contact's open deals together. Before that migration runs the
+      // function is missing, and the plain update keeps the old behaviour.
+      let { error } = await supabase.rpc("transfer_conversation", {
+        p_conversation_id: conversation.id,
+        p_to_user_id: agentId,
+      });
+      if (error && (error.code === "PGRST202" || error.code === "42883")) {
+        ({ error } = await supabase
+          .from("conversations")
+          .update({ assigned_agent_id: agentId })
+          .eq("id", conversation.id));
+      }
 
       if (error) {
         console.error("Failed to update assignment:", error);
         toast.error(t("assignmentUpdateFailed"));
-        return;
+        return false;
       }
 
       onAssignChange(conversation.id, agentId);
+
+      // Automations listening for "conversation assigned" run for the
+      // new owner. Best-effort: the transfer already happened.
+      if (agentId) {
+        void fetch("/api/automations/engine", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            trigger_type: "conversation_assigned",
+            contact_id: conversation.contact_id,
+            context: { conversation_id: conversation.id, agent_id: agentId },
+          }),
+        }).catch(() => undefined);
+      }
+      return true;
     },
     [conversation, onAssignChange, t],
   );
+
+  const handleAssignChange = useCallback(
+    async (agentId: string | null) => {
+      if (!conversation) return;
+      const seesAll = accountRole ? seesAllConversations(accountRole) : false;
+      if (!seesAll && agentId !== user?.id) {
+        const target = profiles.find((p) => p.user_id === agentId);
+        setPendingTransfer({
+          agentId,
+          name: target?.full_name ?? t("transferToQueue"),
+        });
+        return;
+      }
+      await transferConversation(agentId);
+    },
+    [conversation, accountRole, user?.id, profiles, t, transferConversation],
+  );
+
+  async function confirmTransfer() {
+    if (!pendingTransfer) return;
+    setTransferring(true);
+    const ok = await transferConversation(pendingTransfer.agentId);
+    setTransferring(false);
+    if (ok) {
+      toast.success(t("transferDone", { name: pendingTransfer.name }));
+      setPendingTransfer(null);
+    }
+  }
 
   // Empty state — same WhatsApp-style doodle background as the active
   // thread below, so swapping between empty/selected doesn't change the
@@ -1087,6 +1163,44 @@ export function MessageThread({
           </DropdownMenu>
         </div>
       </div>
+
+      {/* A seller passing their lead on: they stop seeing it afterwards. */}
+      <Dialog
+        open={pendingTransfer !== null}
+        onOpenChange={(open) => {
+          if (!open && !transferring) setPendingTransfer(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-sm bg-popover border-border">
+          <DialogHeader>
+            <DialogTitle className="text-popover-foreground">
+              {t("transferTitle", { name: pendingTransfer?.name ?? "" })}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {pendingTransfer?.agentId
+              ? t("transferDesc", { name: pendingTransfer.name })
+              : t("transferToQueueDesc")}
+          </p>
+          <DialogFooter className="bg-popover/50 border-border">
+            <Button
+              variant="outline"
+              disabled={transferring}
+              onClick={() => setPendingTransfer(null)}
+              className="border-border text-muted-foreground hover:bg-muted"
+            >
+              {t("transferCancel")}
+            </Button>
+            <Button
+              disabled={transferring}
+              onClick={() => void confirmTransfer()}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {transferring ? t("transferring") : t("transferConfirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Messages Area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4">

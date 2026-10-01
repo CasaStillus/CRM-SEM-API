@@ -62,7 +62,10 @@
     "defaultAvatar": "Avatar",
     "menuProfile": "Perfil",
     "menuSettings": "Configuración",
-    "menuSignOut": "Cerrar sesión"
+    "menuSignOut": "Cerrar sesión",
+    "availableForLeads": "Disponible para recibir leads",
+    "availableOn": "Estás recibiendo nuevos leads de la ruleta.",
+    "availableOff": "No disponible: la ruleta no te envía leads."
   },
   "ModeToggle": {
     "switchMode": "Cambiar al modo {mode}",
@@ -191,7 +194,15 @@
       "sendTemplateFailed": "Error al enviar la plantilla: {reason}",
       "waitForSending": "Espera a que el mensaje termine de enviarse",
       "reactionFailed": "Error en la reacción: {reason}",
-      "assignmentUpdateFailed": "Error al actualizar la asignación"
+      "assignmentUpdateFailed": "Error al actualizar la asignación",
+      "transferTitle": "¿Pasar el lead a {name}?",
+      "transferDesc": "La conversación sale de tu lista y solo {name} la verá. Las negociaciones abiertas de este contacto también pasan a esa persona.",
+      "transferToQueue": "Cola (sin responsable)",
+      "transferToQueueDesc": "La conversación sale de tu lista y queda sin responsable hasta que un administrador la asigne.",
+      "transferCancel": "Cancelar",
+      "transferConfirm": "Transferir",
+      "transferring": "Transfiriendo…",
+      "transferDone": "Lead transferido a {name}."
     },
     "sessionTimer": {
       "expired": "Expirada",
@@ -2096,6 +2107,23 @@
       "created": "Respuesta rápida creada.",
       "deleteConfirm": "¿Eliminar esta respuesta rápida?",
       "deleteFailed": "No se pudo eliminar la respuesta rápida."
+    },
+    "leadRotation": {
+      "title": "Ruleta de leads",
+      "description": "Cada lead nuevo (incluso de anuncios) va al siguiente vendedor en turno. Los grupos no entran en la ruleta. Quien esté libre puede marcarse como no disponible.",
+      "migrationMissing": "La ruleta aún no está activa en esta base de datos. Ejecuta la migración 053 en Supabase.",
+      "loading": "Cargando miembros…",
+      "member": "Miembro",
+      "inRotation": "En la ruleta",
+      "available": "Disponible",
+      "unnamed": "Sin nombre",
+      "statusReceiving": "Recibiendo leads",
+      "statusUnavailable": "No disponible ahora",
+      "statusOut": "Fuera de la ruleta",
+      "summary": "{count, plural, one {# persona recibiendo leads} other {# personas recibiendo leads}}",
+      "summaryNobody": "Nadie está recibiendo leads: los nuevos quedan sin responsable hasta que alguien esté disponible.",
+      "loadFailed": "No se pudieron cargar los miembros.",
+      "saveFailed": "No se pudo guardar el cambio."
     }
   },
   "SignupPage": {

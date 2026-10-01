@@ -62,7 +62,10 @@
     "defaultAvatar": "아바타",
     "menuProfile": "프로필",
     "menuSettings": "설정",
-    "menuSignOut": "로그아웃"
+    "menuSignOut": "로그아웃",
+    "availableForLeads": "새 리드 받기 가능",
+    "availableOn": "로테이션에서 새 리드를 받고 있습니다.",
+    "availableOff": "받기 불가: 로테이션이 리드를 보내지 않습니다."
   },
   "ModeToggle": {
     "switchMode": "{mode} 모드로 전환",
@@ -191,7 +194,15 @@
       "sendTemplateFailed": "템플릿 전송 실패: {reason}",
       "waitForSending": "메시지 전송이 끝날 때까지 기다려 주세요",
       "reactionFailed": "반응 추가 실패: {reason}",
-      "assignmentUpdateFailed": "담당자 변경에 실패했습니다"
+      "assignmentUpdateFailed": "담당자 변경에 실패했습니다",
+      "transferTitle": "{name}님에게 리드를 넘길까요?",
+      "transferDesc": "대화가 내 목록에서 사라지고 {name}님만 볼 수 있습니다. 이 연락처의 진행 중인 거래도 함께 이동합니다.",
+      "transferToQueue": "대기열 (미배정)",
+      "transferToQueueDesc": "대화가 내 목록에서 사라지고 관리자가 배정할 때까지 미배정 상태로 남습니다.",
+      "transferCancel": "취소",
+      "transferConfirm": "넘기기",
+      "transferring": "넘기는 중…",
+      "transferDone": "{name}님에게 리드를 넘겼습니다."
     },
     "sessionTimer": {
       "expired": "만료됨",
@@ -2096,6 +2107,23 @@
       "created": "빠른 답장이 생성되었습니다.",
       "deleteConfirm": "이 빠른 답장을 삭제할까요?",
       "deleteFailed": "빠른 답장을 삭제하지 못했습니다."
+    },
+    "leadRotation": {
+      "title": "리드 로테이션",
+      "description": "새 리드(광고 포함)는 다음 차례의 영업 담당자에게 배정됩니다. 그룹은 제외됩니다. 휴무 중인 사람은 받기 불가로 설정할 수 있습니다.",
+      "migrationMissing": "이 데이터베이스에서 로테이션이 아직 활성화되지 않았습니다. Supabase에서 마이그레이션 053을 실행하세요.",
+      "loading": "멤버 불러오는 중…",
+      "member": "멤버",
+      "inRotation": "로테이션 포함",
+      "available": "받기 가능",
+      "unnamed": "이름 없음",
+      "statusReceiving": "리드 받는 중",
+      "statusUnavailable": "현재 받기 불가",
+      "statusOut": "로테이션 제외",
+      "summary": "{count, plural, other {#명이 리드를 받는 중}}",
+      "summaryNobody": "리드를 받는 사람이 없습니다. 누군가 가능해질 때까지 새 리드는 미배정 상태로 남습니다.",
+      "loadFailed": "멤버를 불러오지 못했습니다.",
+      "saveFailed": "변경 사항을 저장하지 못했습니다."
     }
   },
   "SignupPage": {

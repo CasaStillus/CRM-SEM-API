@@ -62,7 +62,10 @@
     "defaultAvatar": "Avatar",
     "menuProfile": "Profile",
     "menuSettings": "Settings",
-    "menuSignOut": "Sign out"
+    "menuSignOut": "Sign out",
+    "availableForLeads": "Available for new leads",
+    "availableOn": "You are receiving new leads from the rotation.",
+    "availableOff": "Unavailable: the rotation is not sending you leads."
   },
   "ModeToggle": {
     "switchMode": "Switch to {mode} mode",
@@ -191,7 +194,15 @@
       "sendTemplateFailed": "Failed to send template: {reason}",
       "waitForSending": "Wait for the message to finish sending",
       "reactionFailed": "Reaction failed: {reason}",
-      "assignmentUpdateFailed": "Failed to update assignment"
+      "assignmentUpdateFailed": "Failed to update assignment",
+      "transferTitle": "Hand this lead to {name}?",
+      "transferDesc": "The conversation leaves your list and only {name} will see it. Open deals for this contact move to them too.",
+      "transferToQueue": "Queue (unassigned)",
+      "transferToQueueDesc": "The conversation leaves your list and stays unassigned until an admin assigns it.",
+      "transferCancel": "Cancel",
+      "transferConfirm": "Transfer",
+      "transferring": "Transferring…",
+      "transferDone": "Lead transferred to {name}."
     },
     "sessionTimer": {
       "expired": "Expired",
@@ -2096,6 +2107,23 @@
       "created": "Quick reply created.",
       "deleteConfirm": "Delete this quick reply?",
       "deleteFailed": "Couldn't delete the quick reply."
+    },
+    "leadRotation": {
+      "title": "Lead rotation",
+      "description": "Each new lead (including from ads) goes to the next salesperson in line. Groups are left out. Anyone off duty can mark themselves unavailable.",
+      "migrationMissing": "Lead rotation is not active on this database yet. Run migration 053 in Supabase.",
+      "loading": "Loading members…",
+      "member": "Member",
+      "inRotation": "In rotation",
+      "available": "Available",
+      "unnamed": "No name",
+      "statusReceiving": "Receiving leads",
+      "statusUnavailable": "Unavailable now",
+      "statusOut": "Out of rotation",
+      "summary": "{count, plural, one {# person receiving leads} other {# people receiving leads}}",
+      "summaryNobody": "Nobody is receiving leads: new leads stay unassigned until someone is available.",
+      "loadFailed": "Could not load members.",
+      "saveFailed": "Could not save the change."
     }
   },
   "SignupPage": {

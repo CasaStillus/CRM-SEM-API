@@ -74,6 +74,7 @@ import {
   PresenceDot,
 } from '@/components/presence/presence-dot';
 import { InviteMemberDialog } from './invite-member-dialog';
+import { LeadRotationCard } from './lead-rotation-card';
 import { SettingsPanelHead } from './settings-panel-head';
 import { ROLE_META } from './role-meta';
 
@@ -473,6 +474,11 @@ export function MembersTab() {
           </ul>
         </CardContent>
       </Card>
+
+      {/* Lead rotation — who receives new leads (admin+ only) */}
+      <RequireRole min="admin">
+        <LeadRotationCard />
+      </RequireRole>
 
       {/* Pending invitations — admin+ only */}
       <RequireRole min="admin">

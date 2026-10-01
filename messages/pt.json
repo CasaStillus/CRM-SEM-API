@@ -62,7 +62,10 @@
     "defaultAvatar": "Avatar",
     "menuProfile": "Perfil",
     "menuSettings": "Configurações",
-    "menuSignOut": "Sair"
+    "menuSignOut": "Sair",
+    "availableForLeads": "Disponível para receber leads",
+    "availableOn": "Você está recebendo novos leads da roleta.",
+    "availableOff": "Indisponível: a roleta não envia leads para você."
   },
   "ModeToggle": {
     "switchMode": "Mudar para o modo {mode}",
@@ -191,7 +194,15 @@
       "sendTemplateFailed": "Falha ao enviar o modelo: {reason}",
       "waitForSending": "Aguarde a mensagem terminar de ser enviada",
       "reactionFailed": "Falha na reação: {reason}",
-      "assignmentUpdateFailed": "Falha ao atualizar a atribuição"
+      "assignmentUpdateFailed": "Falha ao atualizar a atribuição",
+      "transferTitle": "Passar o lead para {name}?",
+      "transferDesc": "A conversa sai da sua lista e passa a aparecer só para {name}. As negociações abertas deste contato também vão para essa pessoa.",
+      "transferToQueue": "Fila (sem responsável)",
+      "transferToQueueDesc": "A conversa sai da sua lista e fica sem responsável até um administrador atribuí-la.",
+      "transferCancel": "Cancelar",
+      "transferConfirm": "Transferir",
+      "transferring": "Transferindo…",
+      "transferDone": "Lead transferido para {name}."
     },
     "sessionTimer": {
       "expired": "Expirada",
@@ -2096,6 +2107,23 @@
       "created": "Resposta rápida criada.",
       "deleteConfirm": "Excluir esta resposta rápida?",
       "deleteFailed": "Não foi possível excluir a resposta rápida."
+    },
+    "leadRotation": {
+      "title": "Roleta de leads",
+      "description": "Cada lead novo (inclusive de anúncio) vai para o próximo vendedor da vez. Grupos não entram na roleta. Quem está de folga pode se marcar como indisponível.",
+      "migrationMissing": "A roleta ainda não está ativa neste banco. Rode a migração 053 no Supabase.",
+      "loading": "Carregando membros…",
+      "member": "Membro",
+      "inRotation": "Na roleta",
+      "available": "Disponível",
+      "unnamed": "Sem nome",
+      "statusReceiving": "Recebendo leads",
+      "statusUnavailable": "Indisponível agora",
+      "statusOut": "Fora da roleta",
+      "summary": "{count, plural, one {# pessoa recebendo leads} other {# pessoas recebendo leads}}",
+      "summaryNobody": "Ninguém está recebendo leads: novos leads ficam sem responsável até alguém ficar disponível.",
+      "loadFailed": "Não foi possível carregar os membros.",
+      "saveFailed": "Não foi possível salvar a alteração."
     }
   },
   "SignupPage": {

@@ -17,6 +17,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ModeToggle } from "@/components/layout/mode-toggle";
+import {
+  AvailabilityToggle,
+  useOwnAvailability,
+} from "@/components/layout/availability-toggle";
 
 const pageTitles: Record<string, string> = {
   "/dashboard": "dashboard",
@@ -48,7 +52,8 @@ import { useTranslations } from "next-intl";
 export function Header({ onOpenSidebar }: HeaderProps) {
   const t = useTranslations("Header");
   const pathname = usePathname();
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, user } = useAuth();
+  const availability = useOwnAvailability(user?.id);
   const titleKey = getPageTitleKey(pathname);
 
   const initial =
@@ -81,6 +86,7 @@ export function Header({ onOpenSidebar }: HeaderProps) {
           className="flex items-center gap-2 rounded-md px-1 py-1 transition-colors hover:bg-muted/70 focus:bg-muted/70 focus:outline-none data-popup-open:bg-muted/70 sm:gap-3 sm:pl-1 sm:pr-3"
           aria-label={t("openAccountMenu")}
         >
+          <span className="relative">
           <Avatar className="size-8">
             {profile?.avatar_url ? (
               <AvatarImage
@@ -92,6 +98,14 @@ export function Header({ onOpenSidebar }: HeaderProps) {
               {initial}
             </AvatarFallback>
           </Avatar>
+          {/* Amber dot while marked unavailable: no new leads arrive. */}
+          {availability.available === false && (
+            <span
+              className="absolute -right-0.5 -bottom-0.5 size-3 rounded-full border-2 border-background bg-amber-500"
+              title={t("availableOff")}
+            />
+          )}
+          </span>
           <span className="hidden text-sm font-medium text-foreground sm:inline">
             {profile?.full_name ?? t("defaultUser")}
           </span>
@@ -109,6 +123,16 @@ export function Header({ onOpenSidebar }: HeaderProps) {
               {profile?.email ?? ""}
             </p>
           </div>
+          {availability.available !== null && (
+            <>
+              <DropdownMenuSeparator className="bg-border" />
+              <AvailabilityToggle
+                available={availability.available}
+                saving={availability.saving}
+                onToggle={(next) => void availability.toggle(next)}
+              />
+            </>
+          )}
           <DropdownMenuSeparator className="bg-border" />
           <DropdownMenuItem
             render={

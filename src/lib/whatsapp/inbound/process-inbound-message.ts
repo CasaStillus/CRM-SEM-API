@@ -16,6 +16,7 @@ import { dispatchInboundToAiReply } from '../../ai/auto-reply';
 import { runAutomationsForTrigger } from '../../automations/engine';
 import { findExistingContact, isUniqueViolation } from '../../contacts/dedupe';
 import { reopenClosedConversation } from '../../conversations/reopen';
+import { assignByRoundRobin } from '../../conversations/round-robin';
 import { dispatchInboundToFlows } from '../../flows/engine';
 import { dispatchWebhookEvent } from '../../webhooks/deliver';
 import type { MirrorStorage } from '../mirror-inbound-media';
@@ -889,6 +890,18 @@ export async function processInboundMessage(
   // status in SQL — see the helper for why that matters.
   await reopenClosedConversation(db, conversation);
 
+  // Lead round robin (migration 053). A customer writing into a
+  // conversation nobody owns — a brand-new lead, from an ad or not — is
+  // handed to the next available seller. Groups never enter the
+  // rotation; with nobody available the lead stays with the admin.
+  let roundRobinAgentId: string | null = null;
+  if (!subject.isGroup && !conversation.assigned_agent_id) {
+    roundRobinAgentId = await assignByRoundRobin(db, conversation.id);
+    if (roundRobinAgentId) {
+      conversation.assigned_agent_id = roundRobinAgentId;
+    }
+  }
+
   await flagBroadcastReplyIfAny(db, accountId, contact.id);
 
   // ============================================================
@@ -971,6 +984,20 @@ export async function processInboundMessage(
         message_text: inboundText,
         conversation_id: conversation.id,
         interactive_reply_id: interactiveReplyId ?? undefined,
+      },
+    }).catch((err) => console.error('[automations] dispatch failed:', err));
+  }
+
+  // The rotation just gave this lead an owner: automations listening for
+  // "conversation assigned" (e.g. a greeting with the seller's name) run.
+  if (roundRobinAgentId) {
+    await runAutomationsForTrigger({
+      accountId,
+      triggerType: 'conversation_assigned',
+      contactId: contact.id,
+      context: {
+        conversation_id: conversation.id,
+        agent_id: roundRobinAgentId,
       },
     }).catch((err) => console.error('[automations] dispatch failed:', err));
   }

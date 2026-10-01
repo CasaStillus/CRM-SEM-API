@@ -400,8 +400,12 @@ describe('inbound webhook: idempotent insert (#367)', () => {
       onConflict: 'conversation_id,provider,message_id',
       ignoreDuplicates: true,
     })
-    // Downstream side effects ran exactly once.
-    expect(h.state.rpcCalls).toHaveLength(1)
+    // Downstream side effects ran exactly once: one unread bump, and one
+    // round-robin attempt for the unassigned lead (migration 053).
+    expect(h.state.rpcCalls.map((c) => c.name).sort()).toEqual([
+      'assign_next_round_robin_agent',
+      'bump_conversation_on_inbound',
+    ])
     expect(h.dispatchInboundToFlows).toHaveBeenCalledTimes(1)
     expect(h.dispatchWebhookEvent).toHaveBeenCalledTimes(1)
   })
@@ -426,8 +430,11 @@ describe('inbound webhook: atomic unread bump (#369)', () => {
   it('increments unread through the DB-side RPC, not a read-modify-write', async () => {
     await runWebhook()
 
-    expect(h.state.rpcCalls).toHaveLength(1)
-    expect(h.state.rpcCalls[0]).toMatchObject({
+    const bumps = h.state.rpcCalls.filter(
+      (c) => c.name === 'bump_conversation_on_inbound'
+    )
+    expect(bumps).toHaveLength(1)
+    expect(bumps[0]).toMatchObject({
       name: 'bump_conversation_on_inbound',
       args: { p_conversation_id: 'conv-1' },
     })
