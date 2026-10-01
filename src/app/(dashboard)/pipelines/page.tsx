@@ -30,6 +30,11 @@ import { useCan } from "@/hooks/use-can";
 import { useAuth } from "@/hooks/use-auth";
 import { GatedButton } from "@/components/ui/gated-button";
 import { useTranslations } from "next-intl";
+import {
+  dealHasValue,
+  isDealValueRequiredError,
+  stageRequiresValue,
+} from "@/lib/pipelines/deal-value-rule";
 
 // Pipeline creation is admin-class (settings-tier write under
 // the new RLS); deal creation is operational and only requires
@@ -214,23 +219,74 @@ export default function PipelinesPage() {
     setDeals(await loadDeals(selectedPipelineId));
   }, [loadDeals, selectedPipelineId]);
 
-  const handleDealMoved = useCallback(
-    async (dealId: string, newStageId: string) => {
+  // A move into the negotiation stage that still needs a price. The card
+  // stays where it was until the seller types the value.
+  const [pendingMove, setPendingMove] = useState<{
+    dealId: string;
+    stageId: string;
+    stageName: string;
+  } | null>(null);
+  const [pendingValue, setPendingValue] = useState("");
+  const [savingMove, setSavingMove] = useState(false);
+
+  const persistMove = useCallback(
+    async (dealId: string, newStageId: string, value?: number) => {
       // Optimistic update — board already animated; just persist.
       setDeals((prev) =>
-        prev.map((d) => (d.id === dealId ? { ...d, stage_id: newStageId } : d)),
+        prev.map((d) =>
+          d.id === dealId
+            ? { ...d, stage_id: newStageId, ...(value !== undefined ? { value } : {}) }
+            : d,
+        ),
       );
       const { error } = await supabase
         .from("deals")
-        .update({ stage_id: newStageId })
+        .update(
+          value !== undefined
+            ? { stage_id: newStageId, value }
+            : { stage_id: newStageId },
+        )
         .eq("id", dealId);
       if (error) {
-        toast.error(t("toastFailedMoveDeal"));
+        toast.error(
+          isDealValueRequiredError(error)
+            ? t("toastValueRequired")
+            : t("toastFailedMoveDeal"),
+        );
         refreshDeals();
+        return false;
       }
+      return true;
     },
     [supabase, refreshDeals, t],
   );
+
+  const handleDealMoved = useCallback(
+    async (dealId: string, newStageId: string) => {
+      const target = stages.find((s) => s.id === newStageId);
+      const deal = deals.find((d) => d.id === dealId);
+      if (target && stageRequiresValue(target.name) && !dealHasValue(deal?.value)) {
+        setPendingValue("");
+        setPendingMove({ dealId, stageId: newStageId, stageName: target.name });
+        return;
+      }
+      await persistMove(dealId, newStageId);
+    },
+    [stages, deals, persistMove],
+  );
+
+  async function confirmPendingMove() {
+    if (!pendingMove) return;
+    const amount = parseFloat(pendingValue.replace(",", "."));
+    if (!dealHasValue(amount)) {
+      toast.error(t("toastValueRequired"));
+      return;
+    }
+    setSavingMove(true);
+    const ok = await persistMove(pendingMove.dealId, pendingMove.stageId, amount);
+    setSavingMove(false);
+    if (ok) setPendingMove(null);
+  }
 
   const handleAddDeal = useCallback(
     (stageId?: string) => {
@@ -379,7 +435,7 @@ export default function PipelinesPage() {
           </GatedButton>
           <GatedButton
             canAct={canCreateDeals}
-            gateReason="criar neg?cios"
+            gateReason="criar negócios"
             disabled={!selectedPipelineId || stages.length === 0}
             onClick={() => handleAddDeal()}
             className="bg-primary text-primary-foreground hover:bg-primary/90"
@@ -478,6 +534,61 @@ export default function PipelinesPage() {
           }}
         />
       )}
+
+      {/* Price required before a deal can enter negotiation */}
+      <Dialog
+        open={pendingMove !== null}
+        onOpenChange={(open) => {
+          if (!open && !savingMove) setPendingMove(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-sm bg-popover border-border">
+          <DialogHeader>
+            <DialogTitle className="text-popover-foreground">
+              {t("valueRequiredTitle")}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+            <p className="text-sm text-muted-foreground">
+              {t("valueRequiredDesc", { stage: pendingMove?.stageName ?? "" })}
+            </p>
+            <Label className="mt-4 block text-muted-foreground">
+              {t("valueRequiredLabel")}
+            </Label>
+            <Input
+              autoFocus
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="0.01"
+              value={pendingValue}
+              onChange={(e) => setPendingValue(e.target.value)}
+              placeholder="0,00"
+              className="mt-2 bg-muted border-border text-foreground"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void confirmPendingMove();
+              }}
+            />
+          </div>
+          <DialogFooter className="bg-popover/50 border-border">
+            <Button
+              variant="outline"
+              onClick={() => setPendingMove(null)}
+              disabled={savingMove}
+              className="border-border text-muted-foreground hover:bg-muted"
+            >
+              {t("cancel")}
+            </Button>
+            <Button
+              onClick={() => void confirmPendingMove()}
+              disabled={savingMove || !dealHasValue(pendingValue.replace(",", "."))}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {savingMove ? t("valueRequiredSaving") : t("valueRequiredConfirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Deal Form (Sheet) */}
       <DealForm

@@ -589,7 +589,7 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         .select('default_currency')
         .eq('id', args.automation.account_id)
         .maybeSingle()
-      await db.from('deals').insert({
+      const { error: dealError } = await db.from('deals').insert({
         // Tenancy + audit, same split as automation_logs above.
         account_id: args.automation.account_id,
         user_id: args.automation.user_id,
@@ -601,6 +601,13 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         currency: acct?.default_currency ?? 'USD',
         status: 'open',
       })
+      if (dealError) {
+        // Migration 052: the negotiation stage needs a price.
+        if (dealError.message?.includes('deal_value_required')) {
+          throw new Error('A etapa de negociação exige um valor: informe o valor do negócio nesta ação')
+        }
+        throw new Error(`Não foi possível criar o negócio: ${dealError.message}`)
+      }
       return "Negócio criado"
     }
 

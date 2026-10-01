@@ -33,6 +33,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import {
+  dealHasValue,
+  isDealValueRequiredError,
+  stageRequiresValue,
+} from "@/lib/pipelines/deal-value-rule";
 
 interface DealFormProps {
   open: boolean;
@@ -151,9 +156,17 @@ export function DealForm({
     };
   }, [open, contactId, supabase]);
 
+  const valueRequired = stageRequiresValue(
+    stages.find((s) => s.id === stageId)?.name,
+  );
+
   async function handleSave() {
     if (!title.trim() || !contactId || !stageId) {
       toast.error(t("toastRequired"));
+      return;
+    }
+    if (valueRequired && !dealHasValue(value)) {
+      toast.error(t("toastValueRequired"));
       return;
     }
     setSaving(true);
@@ -176,7 +189,11 @@ export function DealForm({
         .update(payload)
         .eq("id", deal.id);
       if (error) {
-        toast.error(t("toastFailedSave"));
+        toast.error(
+          isDealValueRequiredError(error)
+            ? t("toastValueRequired")
+            : t("toastFailedSave"),
+        );
         setSaving(false);
         return;
       }
@@ -199,7 +216,11 @@ export function DealForm({
         .from("deals")
         .insert({ ...payload, user_id: user.id, account_id: accountId, status: "open" });
       if (error) {
-        toast.error(t("toastFailedCreate"));
+        toast.error(
+          isDealValueRequiredError(error)
+            ? t("toastValueRequired")
+            : t("toastFailedCreate"),
+        );
         setSaving(false);
         return;
       }
@@ -297,7 +318,9 @@ export function DealForm({
 
             <div className="grid grid-cols-[1fr_110px] gap-3">
               <div className="grid gap-2">
-                <Label className="text-muted-foreground">{t("value")}</Label>
+                <Label className="text-muted-foreground">
+                  {valueRequired ? t("valueRequired") : t("value")}
+                </Label>
                 <div className="relative">
                   <DollarSign className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                   <Input
@@ -305,7 +328,12 @@ export function DealForm({
                     value={value}
                     onChange={(e) => setValue(e.target.value)}
                     placeholder="0"
-                    className="border-border bg-muted pl-7 text-foreground"
+                    aria-required={valueRequired}
+                    className={`border-border bg-muted pl-7 text-foreground ${
+                      valueRequired && !dealHasValue(value)
+                        ? "border-destructive/60"
+                        : ""
+                    }`}
                   />
                 </div>
               </div>
