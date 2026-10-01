@@ -144,6 +144,37 @@
     },
     "emptyState": {
       "title": "Ainda não há dados suficientes"
+    },
+    "sales": {
+      "title": "Faturamento e conversão",
+      "descriptionAll": "Soma das negociações ganhas no período e conversão de cada vendedor.",
+      "descriptionOwn": "Suas negociações ganhas no período e sua conversão.",
+      "period": {
+        "week": "Semana",
+        "month": "Mês",
+        "year": "Ano"
+      },
+      "previous": {
+        "week": "Semana passada: {value}",
+        "month": "Mês passado: {value}",
+        "year": "Ano passado: {value}"
+      },
+      "revenue": "Faturamento",
+      "wonDeals": "Vendas ganhas",
+      "lostDeals": "{count, plural, one {# perdida} other {# perdidas}}",
+      "averageTicket": "Ticket médio",
+      "conversion": "Conversão",
+      "leadsCount": "{count, plural, one {de # lead} other {de # leads}}",
+      "seller": "Vendedor",
+      "leads": "Leads",
+      "won": "Ganhas",
+      "lost": "Perdidas",
+      "unassigned": "Sem responsável",
+      "unnamed": "Sem nome",
+      "empty": "Nenhum lead ou venda neste período.",
+      "footnote": "Conversão = vendas ganhas ÷ leads novos no período (grupos não contam). Faturamento conta a data em que a negociação foi marcada como ganha.",
+      "migrationMissing": "Rode a migração 056 no Supabase para ver o faturamento.",
+      "loadFailed": "Não foi possível carregar o faturamento."
     }
   },
   "Inbox": {

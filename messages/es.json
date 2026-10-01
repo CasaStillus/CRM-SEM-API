@@ -144,6 +144,37 @@
     },
     "emptyState": {
       "title": "Aún no hay datos suficientes"
+    },
+    "sales": {
+      "title": "Facturación y conversión",
+      "descriptionAll": "Negociaciones ganadas en el período y la conversión de cada vendedor.",
+      "descriptionOwn": "Tus negociaciones ganadas en el período y tu conversión.",
+      "period": {
+        "week": "Semana",
+        "month": "Mes",
+        "year": "Año"
+      },
+      "previous": {
+        "week": "Semana pasada: {value}",
+        "month": "Mes pasado: {value}",
+        "year": "Año pasado: {value}"
+      },
+      "revenue": "Facturación",
+      "wonDeals": "Ventas ganadas",
+      "lostDeals": "{count, plural, one {# perdida} other {# perdidas}}",
+      "averageTicket": "Ticket promedio",
+      "conversion": "Conversión",
+      "leadsCount": "{count, plural, one {de # lead} other {de # leads}}",
+      "seller": "Vendedor",
+      "leads": "Leads",
+      "won": "Ganadas",
+      "lost": "Perdidas",
+      "unassigned": "Sin responsable",
+      "unnamed": "Sin nombre",
+      "empty": "Sin leads ni ventas en este período.",
+      "footnote": "Conversión = ventas ganadas ÷ leads nuevos del período (sin grupos). La facturación usa la fecha en que la negociación se marcó como ganada.",
+      "migrationMissing": "Ejecuta la migración 056 en Supabase para ver la facturación.",
+      "loadFailed": "No se pudo cargar la facturación."
     }
   },
   "Inbox": {

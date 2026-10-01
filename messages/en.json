@@ -144,6 +144,37 @@
     },
     "emptyState": {
       "title": "Not enough data yet"
+    },
+    "sales": {
+      "title": "Revenue and conversion",
+      "descriptionAll": "Won deals in the period and each seller's conversion.",
+      "descriptionOwn": "Your won deals in the period and your conversion.",
+      "period": {
+        "week": "Week",
+        "month": "Month",
+        "year": "Year"
+      },
+      "previous": {
+        "week": "Last week: {value}",
+        "month": "Last month: {value}",
+        "year": "Last year: {value}"
+      },
+      "revenue": "Revenue",
+      "wonDeals": "Won deals",
+      "lostDeals": "{count} lost",
+      "averageTicket": "Average ticket",
+      "conversion": "Conversion",
+      "leadsCount": "{count, plural, one {of # lead} other {of # leads}}",
+      "seller": "Seller",
+      "leads": "Leads",
+      "won": "Won",
+      "lost": "Lost",
+      "unassigned": "Unassigned",
+      "unnamed": "No name",
+      "empty": "No leads or sales in this period.",
+      "footnote": "Conversion = won deals ÷ new leads in the period (groups excluded). Revenue counts the date the deal was marked won.",
+      "migrationMissing": "Run migration 056 in Supabase to see revenue.",
+      "loadFailed": "Could not load revenue."
     }
   },
   "Inbox": {

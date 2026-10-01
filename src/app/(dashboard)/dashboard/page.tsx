@@ -34,6 +34,7 @@ import { ConversationsChart } from '@/components/dashboard/conversations-chart'
 import { PipelineDonut } from '@/components/dashboard/pipeline-donut'
 import { ResponseTimeChart } from '@/components/dashboard/response-time-chart'
 import { ActivityFeed } from '@/components/dashboard/activity-feed'
+import { SalesPanel } from '@/components/dashboard/sales-panel'
 
 import { useTranslations } from 'next-intl'
 
@@ -191,6 +192,9 @@ export default function DashboardPage() {
 
       {/* Quick actions */}
       <QuickActions />
+
+      {/* Revenue + conversion per seller (migration 056) */}
+      <SalesPanel />
 
       {/* Charts row */}
       {/* items-stretch (the grid default) stretches the two columns to

@@ -144,6 +144,37 @@
     },
     "emptyState": {
       "title": "아직 데이터가 충분하지 않습니다"
+    },
+    "sales": {
+      "title": "매출 및 전환율",
+      "descriptionAll": "기간 내 성사된 거래와 판매자별 전환율.",
+      "descriptionOwn": "기간 내 내가 성사한 거래와 내 전환율.",
+      "period": {
+        "week": "주",
+        "month": "월",
+        "year": "연"
+      },
+      "previous": {
+        "week": "지난주: {value}",
+        "month": "지난달: {value}",
+        "year": "작년: {value}"
+      },
+      "revenue": "매출",
+      "wonDeals": "성사된 거래",
+      "lostDeals": "{count}건 실패",
+      "averageTicket": "평균 거래액",
+      "conversion": "전환율",
+      "leadsCount": "리드 {count}건 중",
+      "seller": "판매자",
+      "leads": "리드",
+      "won": "성사",
+      "lost": "실패",
+      "unassigned": "미배정",
+      "unnamed": "이름 없음",
+      "empty": "이 기간에 리드나 판매가 없습니다.",
+      "footnote": "전환율 = 성사된 거래 ÷ 기간 내 새 리드 (그룹 제외). 매출은 거래가 성사로 표시된 날짜 기준입니다.",
+      "migrationMissing": "매출을 보려면 Supabase에서 마이그레이션 056을 실행하세요.",
+      "loadFailed": "매출을 불러오지 못했습니다."
     }
   },
   "Inbox": {
