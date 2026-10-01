@@ -184,9 +184,16 @@ export function DealForm({
     };
 
     if (deal) {
+      // Changing the owner goes through `transfer_deal` (migration 054):
+      // for a seller, a deal handed to someone else stops being visible
+      // at once, and the database refuses that as a plain edit.
+      const newOwner = assignedTo || null;
+      const ownerChanged = newOwner !== (deal.assigned_to ?? null);
+      const { assigned_to: _owner, ...fields } = payload;
+      void _owner;
       const { error } = await supabase
         .from("deals")
-        .update(payload)
+        .update(ownerChanged ? fields : payload)
         .eq("id", deal.id);
       if (error) {
         toast.error(
@@ -196,6 +203,28 @@ export function DealForm({
         );
         setSaving(false);
         return;
+      }
+      if (ownerChanged) {
+        const { error: transferError } = await supabase.rpc("transfer_deal", {
+          p_deal_id: deal.id,
+          p_to_profile_id: newOwner,
+        });
+        const missing =
+          transferError?.code === "PGRST202" ||
+          transferError?.code === "42883";
+        const fallbackError = missing
+          ? (
+              await supabase
+                .from("deals")
+                .update({ assigned_to: newOwner })
+                .eq("id", deal.id)
+            ).error
+          : transferError;
+        if (fallbackError) {
+          toast.error(t("toastFailedSave"));
+          setSaving(false);
+          return;
+        }
       }
     } else {
       const {

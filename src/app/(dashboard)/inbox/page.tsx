@@ -13,6 +13,7 @@ import { useRealtime } from "@/hooks/use-realtime";
 import { useAuth } from "@/hooks/use-auth";
 import { seesAllConversations } from "@/lib/auth/roles";
 import { ConversationList } from "@/components/inbox/conversation-list";
+import { markConversationRead } from "@/lib/inbox/read-marker";
 import { MessageThread } from "@/components/inbox/message-thread";
 import { ContactSidebar } from "@/components/inbox/contact-sidebar";
 import { toast } from "sonner";
@@ -272,6 +273,14 @@ function InboxPageInner() {
         // knownConvIdsRef for why a closure flag inside the updater would
         // always read false here.
         if (knownConvIdsRef.current.has(newMsg.conversation_id)) {
+          const isActiveConv =
+            activeConversation?.id === newMsg.conversation_id;
+          const fromCustomer = newMsg.sender_type === "customer";
+          // Reading it right now: keep this person's own read marker
+          // current too (migration 055).
+          if (isActiveConv && fromCustomer) {
+            void markConversationRead(createClient(), newMsg.conversation_id);
+          }
           setConversations((prev) =>
             prev.map((c) =>
               c.id === newMsg.conversation_id
@@ -279,10 +288,13 @@ function InboxPageInner() {
                     ...c,
                     last_message_text: newMsg.content_text ?? "",
                     last_message_at: newMsg.created_at,
-                    unread_count:
-                      activeConversation?.id === newMsg.conversation_id
-                        ? 0
-                        : c.unread_count + 1,
+                    unread_count: isActiveConv ? 0 : c.unread_count + 1,
+                    // The count of someone following another person's
+                    // conversation (an admin) only moves on customer
+                    // messages.
+                    viewer_unread: isActiveConv
+                      ? 0
+                      : (c.viewer_unread ?? 0) + (fromCustomer ? 1 : 0),
                   }
                 : c,
             ),
@@ -465,13 +477,16 @@ function InboxPageInner() {
           // does — the user just deep-linked into this conv, treat that the
           // same as a click. Leaves activeConversation.unread_count alone so
           // the MessageThread reset effect still fires the server UPDATE.
-          if (match.unread_count > 0) {
+          if (match.unread_count > 0 || (match.viewer_unread ?? 0) > 0) {
             setConversations((prev) =>
               prev.map((c) =>
-                c.id === match.id ? { ...c, unread_count: 0 } : c,
+                c.id === match.id
+                  ? { ...c, unread_count: 0, viewer_unread: 0 }
+                  : c,
               ),
             );
           }
+          void markConversationRead(createClient(), match.id);
         }
       }
     },
@@ -499,11 +514,15 @@ function InboxPageInner() {
       // even if the realtime UPDATE is dropped.
       setConversations((prev) =>
         prev.map((c) =>
-          c.id === conv.id && c.unread_count > 0
-            ? { ...c, unread_count: 0 }
+          c.id === conv.id &&
+          (c.unread_count > 0 || (c.viewer_unread ?? 0) > 0)
+            ? { ...c, unread_count: 0, viewer_unread: 0 }
             : c,
         ),
       );
+      // This person's own read marker (migration 055) — what an admin
+      // following a seller's conversation goes by.
+      void markConversationRead(createClient(), conv.id);
       // Record the selection on the deep-link ref BEFORE we change the
       // URL. The router.replace below flips `deepLinkConvId`, which can
       // in turn cause ConversationList to refetch and eventually call

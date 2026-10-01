@@ -92,6 +92,15 @@ export async function processStatusUpdate(input: {
     console.error('Error updating message status:', msgErr);
   }
 
+  // 1b) A customer's message marked read was read on the business
+  //     phone — the CRM itself never sends read receipts. Lower the
+  //     responsible person's unread count to what arrived after it
+  //     (migration 055). Receipts for our own messages match no
+  //     customer message and change nothing.
+  if (event.status === 'read') {
+    await applyPhoneRead(db, event);
+  }
+
   // 2) Mirror onto broadcast_recipients. Broadcasts are Meta-only, so a
   //    UAZAPI status never touches them — the id spaces are unrelated and
   //    a coincidental match would corrupt a broadcast's counters.
@@ -124,6 +133,26 @@ export async function processStatusUpdate(input: {
         status: event.status,
       });
     }
+  }
+}
+
+async function applyPhoneRead(
+  db: InboundDatabase,
+  event: NormalizedStatusUpdate
+): Promise<void> {
+  try {
+    const { error } = await db.rpc('apply_phone_read', {
+      p_external_message_id: event.externalMessageId,
+      p_provider: event.provider,
+    });
+    if (error && error.code !== 'PGRST202' && error.code !== '42883') {
+      console.error('[status] apply_phone_read failed:', error.message);
+    }
+  } catch (error) {
+    console.error(
+      '[status] apply_phone_read threw:',
+      error instanceof Error ? error.message : error
+    );
   }
 }
 

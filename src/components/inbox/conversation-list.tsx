@@ -9,8 +9,8 @@ import {
   normalizeConversations,
 } from "@/lib/inbox/conversations";
 import { cn } from "@/lib/utils";
-import type { Conversation, ConversationStatus, Tag } from "@/types";
-import { Search, ChevronDown, Users, X } from "lucide-react";
+import type { Conversation, Tag } from "@/types";
+import { Search, ChevronDown, Users, X, ArrowDownUp, CalendarDays } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useAuth } from "@/hooks/use-auth";
+import { seesAllConversations } from "@/lib/auth/roles";
+import {
+  applyInboxFilters,
+  isAwaitingReply,
+  unreadFor,
+  type InboxPeriod,
+  type InboxSort,
+  type InboxStatusFilter,
+  type InboxViewer,
+} from "@/lib/inbox/inbox-filters";
 
 interface ConversationListProps {
   activeConversationId: string | null;
@@ -39,7 +50,7 @@ interface ConversationListProps {
 
 
 
-type InboxFilter = ConversationStatus | "all" | "unread";
+type InboxFilter = InboxStatusFilter;
 
 export function ConversationList({
   activeConversationId,
@@ -53,13 +64,36 @@ export function ConversationList({
   const FILTER_OPTIONS: { label: string; value: InboxFilter }[] = useMemo(() => [
     { label: t("filterAll"), value: "all" },
     { label: t("filterUnread"), value: "unread" },
+    { label: t("filterAwaitingReply"), value: "awaiting_reply" },
     { label: t("filterOpen"), value: "open" },
     { label: t("filterPending"), value: "pending" },
     { label: t("filterClosed"), value: "closed" },
   ], [t]);
 
+  const SORT_OPTIONS: { label: string; value: InboxSort }[] = useMemo(() => [
+    { label: t("sortRecent"), value: "recent" },
+    { label: t("sortOldest"), value: "oldest" },
+  ], [t]);
+
+  const PERIOD_OPTIONS: { label: string; value: InboxPeriod }[] = useMemo(() => [
+    { label: t("periodAny"), value: "any" },
+    { label: t("period7d"), value: "7d" },
+    { label: t("period30d"), value: "30d" },
+  ], [t]);
+
+  // Who is looking decides which unread count shows (migration 055):
+  // an admin following a seller's conversation has a count of their own.
+  const { user, accountRole, profileLoading } = useAuth();
+  const seesAll = accountRole ? seesAllConversations(accountRole) : false;
+  const viewer: InboxViewer = useMemo(
+    () => ({ userId: user?.id ?? null, seesAll }),
+    [user?.id, seesAll],
+  );
+
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<InboxFilter>("all");
+  const [sort, setSort] = useState<InboxSort>("recent");
+  const [period, setPeriod] = useState<InboxPeriod>("any");
   const [loading, setLoading] = useState(true);
   // Contact-based filters (issue #272). Tags use OR logic (a conversation
   // matches if its contact carries any selected tag), consistent with
@@ -86,14 +120,20 @@ export function ConversationList({
   });
 
   useEffect(() => {
+    // Wait for the role so the list is fetched once, with the right
+    // unread counts, instead of once before and once after it resolves.
+    if (profileLoading) return;
     const supabase = createClient();
     let cancelled = false;
 
     (async () => {
-      const { data, error } = await supabase
-        .from("conversations")
-        .select(CONVERSATION_SELECT)
-        .order("last_message_at", { ascending: false });
+      const [{ data, error }, viewerCounts] = await Promise.all([
+        supabase
+          .from("conversations")
+          .select(CONVERSATION_SELECT)
+          .order("last_message_at", { ascending: false }),
+        seesAll ? loadViewerUnread(supabase) : Promise.resolve(null),
+      ]);
 
       if (cancelled) return;
 
@@ -109,7 +149,15 @@ export function ConversationList({
         return;
       }
 
-      onConversationsLoadedRef.current(normalizeConversations(data ?? []));
+      const loaded = normalizeConversations(data ?? []);
+      onConversationsLoadedRef.current(
+        viewerCounts
+          ? loaded.map((c) => ({
+              ...c,
+              viewer_unread: viewerCounts.get(c.id) ?? 0,
+            }))
+          : loaded,
+      );
       setLoading(false);
     })();
 
@@ -119,7 +167,7 @@ export function ConversationList({
     // `resyncToken` is included so the parent can force a refetch when
     // the realtime channel reconnects or the tab regains focus — catches
     // up on any events sent while the WS was disconnected or throttled.
-  }, [resyncToken]);
+  }, [resyncToken, profileLoading, seesAll]);
 
   // Tag definitions for the filter picker — loaded once so labels/colours
   // stay stable regardless of which conversations happen to be loaded.
@@ -154,13 +202,12 @@ export function ConversationList({
   }, [tags]);
 
   const filtered = useMemo(() => {
-    let result = conversations;
-
-    if (filter === "unread") {
-      result = result.filter((c) => c.unread_count > 0);
-    } else if (filter !== "all") {
-      result = result.filter((c) => c.status === filter);
-    }
+    let result = applyInboxFilters(conversations, {
+      status: filter,
+      sort,
+      period,
+      viewer,
+    });
 
     // Contact-based filters (tags via OR logic, exact company match).
     if (selectedTagIds.length > 0 || selectedCompany !== null) {
@@ -183,7 +230,7 @@ export function ConversationList({
     }
 
     return result;
-  }, [conversations, filter, search, selectedTagIds, selectedCompany]);
+  }, [conversations, filter, sort, period, viewer, search, selectedTagIds, selectedCompany]);
 
   const toggleTag = useCallback((id: string) => {
     setSelectedTagIds((prev) =>
@@ -213,6 +260,8 @@ export function ConversationList({
   );
 
   const activeFilter = FILTER_OPTIONS.find((o) => o.value === filter);
+  const activeSort = SORT_OPTIONS.find((o) => o.value === sort);
+  const activePeriod = PERIOD_OPTIONS.find((o) => o.value === period);
 
   return (
     // w-full on mobile so the list occupies the whole viewport when it's
@@ -250,6 +299,66 @@ export function ConversationList({
                     filter === opt.value
                       ? "text-primary"
                       : "text-popover-foreground"
+                  )}
+                >
+                  {opt.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className={cn(
+                "inline-flex items-center justify-center h-7 gap-1 px-2 text-xs rounded-md hover:bg-muted",
+                sort !== "recent"
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+              title={t("sortLabel")}
+            >
+              <ArrowDownUp className="h-3 w-3" />
+              {activeSort?.label}
+              <ChevronDown className="h-3 w-3" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="border-border bg-popover">
+              {SORT_OPTIONS.map((opt) => (
+                <DropdownMenuItem
+                  key={opt.value}
+                  onClick={() => setSort(opt.value)}
+                  className={cn(
+                    "text-sm",
+                    sort === opt.value ? "text-primary" : "text-popover-foreground"
+                  )}
+                >
+                  {opt.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className={cn(
+                "inline-flex items-center justify-center h-7 gap-1 px-2 text-xs rounded-md hover:bg-muted",
+                period !== "any"
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+              title={t("periodLabel")}
+            >
+              <CalendarDays className="h-3 w-3" />
+              {activePeriod?.label}
+              <ChevronDown className="h-3 w-3" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="border-border bg-popover">
+              {PERIOD_OPTIONS.map((opt) => (
+                <DropdownMenuItem
+                  key={opt.value}
+                  onClick={() => setPeriod(opt.value)}
+                  className={cn(
+                    "text-sm",
+                    period === opt.value ? "text-primary" : "text-popover-foreground"
                   )}
                 >
                   {opt.label}
@@ -407,6 +516,7 @@ export function ConversationList({
                 key={conv.id}
                 conversation={conv}
                 isActive={conv.id === activeConversationId}
+                unread={unreadFor(conv, viewer)}
                 onSelect={handleSelect}
                 t={t}
               />
@@ -421,6 +531,8 @@ export function ConversationList({
 interface ConversationItemProps {
   conversation: Conversation;
   isActive: boolean;
+  /** The count for whoever is looking (see `unreadFor`). */
+  unread: number;
   onSelect: (conversation: Conversation) => void;
   t: ReturnType<typeof useTranslations>;
 }
@@ -428,6 +540,7 @@ interface ConversationItemProps {
 function ConversationItem({
   conversation,
   isActive,
+  unread,
   onSelect,
   t,
 }: ConversationItemProps) {
@@ -482,12 +595,18 @@ function ConversationItem({
             {conversation.last_message_text || t("noMessagesYet")}
           </p>
           <div className="flex shrink-0 items-center gap-1.5">
-            {conversation.unread_count > 0 && (
+            {isAwaitingReply(conversation) && unread === 0 && (
+              <span
+                className="h-2 w-2 rounded-full bg-amber-500"
+                title={t("filterAwaitingReply")}
+              />
+            )}
+            {unread > 0 && (
               <span
                 className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground"
                 title={t("filterUnread")}
               >
-                {conversation.unread_count}
+                {unread}
               </span>
             )}
           </div>
@@ -495,4 +614,26 @@ function ConversationItem({
       </div>
     </button>
   );
+}
+
+/**
+ * Unread counts for conversations that belong to someone else, as seen
+ * by the person logged in (migration 055). Null when the migration has
+ * not been applied, so the list simply falls back to the shared count.
+ */
+async function loadViewerUnread(
+  supabase: ReturnType<typeof createClient>,
+): Promise<Map<string, number> | null> {
+  const { data, error } = await supabase.rpc("my_unread_counts");
+  if (error) {
+    if (error.code !== "PGRST202" && error.code !== "42883") {
+      console.error("Failed to load unread counts:", error.message);
+    }
+    return null;
+  }
+  const counts = new Map<string, number>();
+  for (const row of (data ?? []) as { conversation_id: string; unread: number }[]) {
+    counts.set(row.conversation_id, Number(row.unread) || 0);
+  }
+  return counts;
 }

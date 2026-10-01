@@ -192,6 +192,18 @@ export interface Conversation {
   last_message_text?: string;
   last_message_at?: string;
   unread_count: number;
+  /**
+   * Who sent the last message (migration 055). `customer` means the
+   * conversation is waiting for a reply.
+   */
+  last_message_sender?: 'customer' | 'agent' | 'bot' | null;
+  last_inbound_at?: string | null;
+  /**
+   * Client-side only: unread count for someone looking at a
+   * conversation assigned to another person (an admin following a
+   * seller). Loaded from `my_unread_counts()`; never a DB column.
+   */
+  viewer_unread?: number;
   created_at: string;
   updated_at: string;
   contact?: Contact;
