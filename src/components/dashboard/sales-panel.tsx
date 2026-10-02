@@ -9,29 +9,34 @@ import { useAuth } from '@/hooks/use-auth'
 import { seesAllConversations } from '@/lib/auth/roles'
 import { formatCurrency } from '@/lib/currency'
 import { createClient } from '@/lib/supabase/client'
-import { cn } from '@/lib/utils'
 import {
   conversionRate,
   loadSalesBySeller,
   percentChange,
-  periodRange,
   totalsOf,
   visibleSellerRows,
   type SalesLoadResult,
-  type SalesPeriod,
 } from '@/lib/dashboard/sales'
+import {
+  defaultUnit,
+  presetRange,
+  previousRange,
+  type BucketUnit,
+  type DateRangeValue,
+} from '@/lib/dashboard/revenue'
+import { DateRangeFilter } from './date-range-filter'
+import { RevenueBreakdown } from './revenue-breakdown'
 import { Skeleton } from './skeleton'
 
-const PERIODS: SalesPeriod[] = ['week', 'month', 'year']
-
 interface PeriodData {
+  key: string
   current: SalesLoadResult
   previous: SalesLoadResult
 }
 
 /**
- * Revenue (won deals) for this week / month / year, compared with the
- * previous one, and conversion per seller. A seller sees only their
+ * Revenue (won deals) for any period, split by day / week / month,
+ * compared with the period right before, and conversion per seller. A seller sees only their
  * own numbers — the database applies the same rule.
  */
 export function SalesPanel() {
@@ -40,26 +45,35 @@ export function SalesPanel() {
   const seesAll = accountRole ? seesAllConversations(accountRole) : false
   const userId = user?.id ?? null
 
-  const [period, setPeriod] = useState<SalesPeriod>('month')
-  const [cache, setCache] = useState<Partial<Record<SalesPeriod, PeriodData>>>({})
-  const data = cache[period]
+  const [range, setRange] = useState<DateRangeValue>(() => presetRange('thisMonth'))
+  const [unit, setUnit] = useState<BucketUnit>(() => defaultUnit(presetRange('thisMonth')))
+  const [loaded, setLoaded] = useState<PeriodData | null>(null)
+
+  const fromMs = range.from.getTime()
+  const toMs = range.to.getTime()
+  const rangeKey = `${fromMs}|${toMs}`
+  const data = loaded && loaded.key === rangeKey ? loaded : null
 
   useEffect(() => {
-    if (profileLoading || cache[period]) return
+    if (profileLoading) return
     let cancelled = false
     const db = createClient()
-    const range = periodRange(period)
+    const current = { from: new Date(fromMs), to: new Date(toMs) }
+    const prev = previousRange({ ...range, ...current })
     void Promise.all([
-      loadSalesBySeller(db, range.from, range.to),
-      loadSalesBySeller(db, range.prevFrom, range.prevTo),
-    ]).then(([current, previous]) => {
+      loadSalesBySeller(db, current.from, current.to),
+      loadSalesBySeller(db, prev.from, prev.to),
+    ]).then(([cur, previous]) => {
       if (cancelled) return
-      setCache((prev) => ({ ...prev, [period]: { current, previous } }))
+      setLoaded({ key: rangeKey, current: cur, previous })
     })
     return () => {
       cancelled = true
     }
-  }, [period, cache, profileLoading])
+    // `range` is read only for its preset (previous-period rule); the
+    // timestamps are what identify a request.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fromMs, toMs, rangeKey, profileLoading])
 
   const view = (() => {
     if (!data || data.current.status !== 'ok') return null
@@ -85,6 +99,13 @@ export function SalesPanel() {
       ? '—'
       : `${v.toLocaleString(APP_LOCALE, { maximumFractionDigits: 1 })}%`
 
+  const previousKind =
+    range.preset === 'thisMonth' || range.preset === 'lastMonth'
+      ? 'month'
+      : range.preset === 'thisYear'
+        ? 'year'
+        : 'period'
+
   const change = view?.prevTotals
     ? percentChange(view.totals.revenue, view.prevTotals.revenue)
     : null
@@ -98,23 +119,14 @@ export function SalesPanel() {
             {seesAll ? t('descriptionAll') : t('descriptionOwn')}
           </p>
         </div>
-        <div className="flex items-center gap-1 rounded-lg bg-muted/60 p-1">
-          {PERIODS.map((p) => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setPeriod(p)}
-              className={cn(
-                'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                period === p
-                  ? 'bg-secondary text-secondary-foreground'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {t(`period.${p}`)}
-            </button>
-          ))}
-        </div>
+        <DateRangeFilter
+          range={range}
+          unit={unit}
+          onChange={(nextRange, nextUnit) => {
+            setRange(nextRange)
+            setUnit(nextUnit)
+          }}
+        />
       </header>
 
       <div className="p-5">
@@ -128,7 +140,7 @@ export function SalesPanel() {
           <div className="space-y-5">
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
               <Stat label={t('revenue')} value={money(view.totals.revenue)}>
-                {view.prevTotals && (
+                {view.prevTotals && range.preset !== 'all' && (
                   <span className="flex items-center gap-1">
                     {change !== null &&
                       (change >= 0 ? (
@@ -136,7 +148,7 @@ export function SalesPanel() {
                       ) : (
                         <TrendingDown className="h-3 w-3 text-rose-500" />
                       ))}
-                    {t(`previous.${period}`, {
+                    {t(`previous.${previousKind}`, {
                       value: money(view.prevTotals.revenue),
                     })}
                   </span>
@@ -163,6 +175,8 @@ export function SalesPanel() {
                 {t('leadsCount', { count: view.totals.leads })}
               </Stat>
             </div>
+
+            <RevenueBreakdown range={range} unit={unit} showTotals={false} />
 
             <div className="overflow-x-auto">
               <table className="w-full min-w-[520px] text-sm">

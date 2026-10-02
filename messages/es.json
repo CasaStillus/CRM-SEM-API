@@ -147,17 +147,12 @@
     },
     "sales": {
       "title": "Facturación y conversión",
-      "descriptionAll": "Negociaciones ganadas en el período y la conversión de cada vendedor.",
-      "descriptionOwn": "Tus negociaciones ganadas en el período y tu conversión.",
-      "period": {
-        "week": "Semana",
-        "month": "Mes",
-        "year": "Año"
-      },
+      "descriptionAll": "Negociaciones ganadas en el período, separadas por día, semana o mes, y la conversión de cada vendedor.",
+      "descriptionOwn": "Tus negociaciones ganadas en el período, separadas por día, semana o mes, y tu conversión.",
       "previous": {
-        "week": "Semana pasada: {value}",
-        "month": "Mes pasado: {value}",
-        "year": "Año pasado: {value}"
+        "month": "Mes anterior: {value}",
+        "year": "Año anterior: {value}",
+        "period": "Período anterior: {value}"
       },
       "revenue": "Facturación",
       "wonDeals": "Ventas ganadas",
@@ -174,6 +169,50 @@
       "empty": "Sin leads ni ventas en este período.",
       "footnote": "Conversión = ventas ganadas ÷ leads nuevos del período (sin grupos). La facturación usa la fecha en que la negociación se marcó como ganada.",
       "migrationMissing": "Ejecuta la migración 056 en Supabase para ver la facturación.",
+      "loadFailed": "No se pudo cargar la facturación."
+    },
+    "dateRange": {
+      "period": "Período",
+      "from": "Desde",
+      "until": "Hasta",
+      "to": "a",
+      "groupBy": "Agrupar por",
+      "tooMany": "Período demasiado largo para esta agrupación",
+      "presets": {
+        "today": "Hoy",
+        "7d": "Últimos 7 días",
+        "30d": "Últimos 30 días",
+        "thisWeek": "Esta semana",
+        "thisMonth": "Este mes",
+        "lastMonth": "Mes pasado",
+        "thisYear": "Este año",
+        "all": "Todo el período",
+        "custom": "Elegir fechas…"
+      },
+      "units": {
+        "day": "Día",
+        "week": "Semana",
+        "month": "Mes"
+      }
+    },
+    "revenue": {
+      "revenue": "Facturación",
+      "sales": "Ventas",
+      "averageTicket": "Ticket promedio",
+      "best": {
+        "day": "Mejor día",
+        "week": "Mejor semana",
+        "month": "Mejor mes"
+      },
+      "empty": "No hay ventas ganadas en este período.",
+      "showTable": "Ver como tabla",
+      "column": {
+        "day": "Día",
+        "week": "Semana",
+        "month": "Mes"
+      },
+      "weekOf": "Semana del {date}",
+      "migrationMissing": "Ejecuta la migración 057 en Supabase para ver la facturación por período.",
       "loadFailed": "No se pudo cargar la facturación."
     }
   },
@@ -658,7 +697,10 @@
       "valueRequiredSaving": "Guardando...",
       "toastFailedCreatePipeline": "Error al crear el pipeline",
       "toastPipelineCreated": "Pipeline creado",
-      "toastNotLinkedToAccount": "Tu perfil no está vinculado a una cuenta."
+      "toastNotLinkedToAccount": "Tu perfil no está vinculado a una cuenta.",
+      "showRevenue": "Ver facturación",
+      "hideRevenue": "Ocultar facturación",
+      "rangeFilterHint": "{count, plural, one {# negociación creada o cerrada} other {# negociaciones creadas o cerradas}} en este período."
     },
     "board": {
       "dropDealHere": "Suelta un negocio aquí",

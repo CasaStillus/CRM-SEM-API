@@ -472,6 +472,8 @@ export interface Deal {
   notes?: string;
   expected_close_date?: string;
   status?: DealStatus;
+  /** When it was marked won or lost (migration 056); null while open. */
+  closed_at?: string | null;
   created_at: string;
   updated_at?: string;
   contact?: Contact;

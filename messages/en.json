@@ -147,17 +147,12 @@
     },
     "sales": {
       "title": "Revenue and conversion",
-      "descriptionAll": "Won deals in the period and each seller's conversion.",
-      "descriptionOwn": "Your won deals in the period and your conversion.",
-      "period": {
-        "week": "Week",
-        "month": "Month",
-        "year": "Year"
-      },
+      "descriptionAll": "Won deals in the period, split by day, week or month, and each seller's conversion.",
+      "descriptionOwn": "Your won deals in the period, split by day, week or month, and your conversion.",
       "previous": {
-        "week": "Last week: {value}",
-        "month": "Last month: {value}",
-        "year": "Last year: {value}"
+        "month": "Previous month: {value}",
+        "year": "Previous year: {value}",
+        "period": "Previous period: {value}"
       },
       "revenue": "Revenue",
       "wonDeals": "Won deals",
@@ -174,6 +169,50 @@
       "empty": "No leads or sales in this period.",
       "footnote": "Conversion = won deals ÷ new leads in the period (groups excluded). Revenue counts the date the deal was marked won.",
       "migrationMissing": "Run migration 056 in Supabase to see revenue.",
+      "loadFailed": "Could not load revenue."
+    },
+    "dateRange": {
+      "period": "Period",
+      "from": "From",
+      "until": "Until",
+      "to": "to",
+      "groupBy": "Group by",
+      "tooMany": "Range too long for this grouping",
+      "presets": {
+        "today": "Today",
+        "7d": "Last 7 days",
+        "30d": "Last 30 days",
+        "thisWeek": "This week",
+        "thisMonth": "This month",
+        "lastMonth": "Last month",
+        "thisYear": "This year",
+        "all": "All time",
+        "custom": "Pick dates…"
+      },
+      "units": {
+        "day": "Day",
+        "week": "Week",
+        "month": "Month"
+      }
+    },
+    "revenue": {
+      "revenue": "Revenue",
+      "sales": "Sales",
+      "averageTicket": "Average ticket",
+      "best": {
+        "day": "Best day",
+        "week": "Best week",
+        "month": "Best month"
+      },
+      "empty": "No won deals in this period.",
+      "showTable": "Show as table",
+      "column": {
+        "day": "Day",
+        "week": "Week",
+        "month": "Month"
+      },
+      "weekOf": "Week of {date}",
+      "migrationMissing": "Run migration 057 in Supabase to see revenue by period.",
       "loadFailed": "Could not load revenue."
     }
   },
@@ -658,7 +697,10 @@
       "valueRequiredSaving": "Saving...",
       "toastFailedCreatePipeline": "Failed to create pipeline",
       "toastPipelineCreated": "Pipeline created",
-      "toastNotLinkedToAccount": "Your profile is not linked to an account."
+      "toastNotLinkedToAccount": "Your profile is not linked to an account.",
+      "showRevenue": "Show revenue",
+      "hideRevenue": "Hide revenue",
+      "rangeFilterHint": "{count, plural, one {# deal} other {# deals}} created or closed in this period."
     },
     "board": {
       "dropDealHere": "Drop a deal here",

@@ -24,12 +24,20 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GitBranch, Plus, ChevronDown, Settings } from "lucide-react";
+import { GitBranch, Plus, ChevronDown, Settings, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { useCan } from "@/hooks/use-can";
 import { useAuth } from "@/hooks/use-auth";
 import { GatedButton } from "@/components/ui/gated-button";
 import { notifyDealStageChanged } from "@/lib/pipelines/stage-events";
+import { DateRangeFilter } from "@/components/dashboard/date-range-filter";
+import { RevenueBreakdown } from "@/components/dashboard/revenue-breakdown";
+import {
+  dealInRange,
+  presetRange,
+  type BucketUnit,
+  type DateRangeValue,
+} from "@/lib/dashboard/revenue";
 import { useTranslations } from "next-intl";
 import {
   dealHasValue,
@@ -75,6 +83,12 @@ export default function PipelinesPage() {
   const [dealFormOpen, setDealFormOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const [defaultStageId, setDefaultStageId] = useState<string>("");
+
+  // Period filter: drives the revenue chart and which cards the board
+  // shows (created or closed in the period). "Tudo" shows every card.
+  const [range, setRange] = useState<DateRangeValue>(() => presetRange("all"));
+  const [unit, setUnit] = useState<BucketUnit>("month");
+  const [revenueOpen, setRevenueOpen] = useState(true);
 
   // Guard against double-seeding (React StrictMode double-effect in dev).
   const seedAttempted = useRef(false);
@@ -261,6 +275,18 @@ export default function PipelinesPage() {
       // "Negociação mudou de etapa" automations.
       if (fromStageId !== newStageId) {
         notifyDealStageChanged(dealId, fromStageId);
+        // A Ganho / Perdido stage changes the status in the database
+        // (migration 057); pick it up so the card shows it right away.
+        const { data: fresh } = await supabase
+          .from("deals")
+          .select("status, closed_at")
+          .eq("id", dealId)
+          .maybeSingle();
+        if (fresh) {
+          setDeals((prev) =>
+            prev.map((d) => (d.id === dealId ? { ...d, ...fresh } : d)),
+          );
+        }
       }
       return true;
     },
@@ -358,6 +384,7 @@ export default function PipelinesPage() {
   }
 
   const selectedPipeline = pipelines.find((p) => p.id === selectedPipelineId);
+  const visibleDeals = deals.filter((d) => dealInRange(d, range));
 
   if (loading) {
     return (
@@ -474,10 +501,44 @@ export default function PipelinesPage() {
         </div>
       ) : (
         <>
-          <PipelineAnalytics stages={stages} deals={deals} />
+          <div className="space-y-3 rounded-xl border border-border bg-card p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <DateRangeFilter
+                range={range}
+                unit={unit}
+                onChange={(nextRange, nextUnit) => {
+                  setRange(nextRange);
+                  setUnit(nextUnit);
+                }}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setRevenueOpen((v) => !v)}
+                className="border-border text-foreground hover:bg-muted"
+                aria-expanded={revenueOpen}
+              >
+                <BarChart3 className="mr-1 h-4 w-4" />
+                {revenueOpen ? t("hideRevenue") : t("showRevenue")}
+              </Button>
+            </div>
+            {range.preset !== "all" && (
+              <p className="text-xs text-muted-foreground">
+                {t("rangeFilterHint", { count: visibleDeals.length })}
+              </p>
+            )}
+            {revenueOpen && (
+              <RevenueBreakdown
+                range={range}
+                unit={unit}
+                pipelineId={selectedPipelineId || null}
+              />
+            )}
+          </div>
+          <PipelineAnalytics stages={stages} deals={visibleDeals} />
           <PipelineBoard
             stages={stages}
-            deals={deals}
+            deals={visibleDeals}
             onDealMoved={handleDealMoved}
             onAddDeal={handleAddDeal}
             onEditDeal={handleEditDeal}

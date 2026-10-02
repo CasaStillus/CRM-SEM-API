@@ -147,17 +147,12 @@
     },
     "sales": {
       "title": "매출 및 전환율",
-      "descriptionAll": "기간 내 성사된 거래와 판매자별 전환율.",
-      "descriptionOwn": "기간 내 내가 성사한 거래와 내 전환율.",
-      "period": {
-        "week": "주",
-        "month": "월",
-        "year": "연"
-      },
+      "descriptionAll": "기간 내 성사된 거래(일·주·월별)와 판매자별 전환율.",
+      "descriptionOwn": "기간 내 내가 성사한 거래(일·주·월별)와 내 전환율.",
       "previous": {
-        "week": "지난주: {value}",
-        "month": "지난달: {value}",
-        "year": "작년: {value}"
+        "month": "이전 달: {value}",
+        "year": "이전 연도: {value}",
+        "period": "이전 기간: {value}"
       },
       "revenue": "매출",
       "wonDeals": "성사된 거래",
@@ -174,6 +169,50 @@
       "empty": "이 기간에 리드나 판매가 없습니다.",
       "footnote": "전환율 = 성사된 거래 ÷ 기간 내 새 리드 (그룹 제외). 매출은 거래가 성사로 표시된 날짜 기준입니다.",
       "migrationMissing": "매출을 보려면 Supabase에서 마이그레이션 056을 실행하세요.",
+      "loadFailed": "매출을 불러오지 못했습니다."
+    },
+    "dateRange": {
+      "period": "기간",
+      "from": "시작",
+      "until": "종료",
+      "to": "~",
+      "groupBy": "그룹 기준",
+      "tooMany": "이 그룹 기준에는 기간이 너무 깁니다",
+      "presets": {
+        "today": "오늘",
+        "7d": "최근 7일",
+        "30d": "최근 30일",
+        "thisWeek": "이번 주",
+        "thisMonth": "이번 달",
+        "lastMonth": "지난달",
+        "thisYear": "올해",
+        "all": "전체 기간",
+        "custom": "날짜 선택…"
+      },
+      "units": {
+        "day": "일",
+        "week": "주",
+        "month": "월"
+      }
+    },
+    "revenue": {
+      "revenue": "매출",
+      "sales": "판매",
+      "averageTicket": "평균 거래액",
+      "best": {
+        "day": "최고의 날",
+        "week": "최고의 주",
+        "month": "최고의 달"
+      },
+      "empty": "이 기간에 성사된 거래가 없습니다.",
+      "showTable": "표로 보기",
+      "column": {
+        "day": "일",
+        "week": "주",
+        "month": "월"
+      },
+      "weekOf": "{date} 주",
+      "migrationMissing": "기간별 매출을 보려면 Supabase에서 마이그레이션 057을 실행하세요.",
       "loadFailed": "매출을 불러오지 못했습니다."
     }
   },
@@ -658,7 +697,10 @@
       "valueRequiredSaving": "저장 중...",
       "toastFailedCreatePipeline": "파이프라인을 만들지 못했습니다",
       "toastPipelineCreated": "파이프라인이 생성되었습니다",
-      "toastNotLinkedToAccount": "프로필이 계정에 연결되어 있지 않습니다."
+      "toastNotLinkedToAccount": "프로필이 계정에 연결되어 있지 않습니다.",
+      "showRevenue": "매출 보기",
+      "hideRevenue": "매출 숨기기",
+      "rangeFilterHint": "이 기간에 생성되었거나 종료된 거래 {count}건."
     },
     "board": {
       "dropDealHere": "여기에 딜을 놓으세요",
